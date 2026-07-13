@@ -1,0 +1,11 @@
+{
+  "gamed_dimension": "language_consistency",
+  "why": "The language scorer detects ONE language per fixed-size chunk. Mixing that happens INSIDE every chunk — a Chinese clause woven into each English sentence — never produces an inconsistent chunk, so heavy bilingual interleaving passes as monolingual. (Related: issue #3, CJK undercounting in the word counter.)",
+  "trace": {
+    "id": "adv-language",
+    "problem": "Solve for x: 2x + 6 = 20.",
+    "thinking": "Start by isolating the variable terms 首先把常数移到右边 so subtract six from both sides of the equation which leaves the doubled unknown 得到 2x 等于 14 and the arithmetic stays simple throughout this step. Now divide each side by two 两边同时除以二 so the unknown resolves cleanly to a single value 所以 x 等于 7 and nothing else needs to move anywhere. As a final pass substitute the candidate back 把 7 代入原式 which turns the left side into fourteen plus six 也就是 20 matching the right side exactly as required. The whole derivation held in both directions 前后完全一致 so the working is done and the value stands 最终答案就是 7 with the check complete.",
+    "answer": "x = 7"
+  },
+  "expect_min": { "language_score": 85.0 }
+}

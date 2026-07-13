@@ -1,0 +1,11 @@
+{
+  "gamed_dimension": "structural_clarity",
+  "why": "The structure scorer counts step markers and logical connectors. Content-free sentences dressed in 'Step 1 / therefore / thus' scaffolding earn full structural credit — the scorer sees the skeleton, not whether anything connects.",
+  "trace": {
+    "id": "adv-structure",
+    "problem": "Name the largest planet in the solar system.",
+    "thinking": "Step 1: First, planets are round because gravity, therefore roundness matters. Step 2: Second, big things are large, thus size is a property, and it follows that properties exist. Step 3: Third, since space is big, we know that big is a word, which implies words describe things. Finally, therefore, as a result of all this, consequently the answer presents itself. Therefore the answer is Jupiter.",
+    "answer": "Jupiter"
+  },
+  "expect_min": { "structural_score": 80.0 }
+}

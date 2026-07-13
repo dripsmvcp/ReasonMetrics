@@ -1,0 +1,11 @@
+{
+  "gamed_dimension": "repetition",
+  "why": "The repetition scorer deduplicates NORMALIZED EXACT sentences and paragraphs. Saying the same thing six times in different words — classic model spinning — is invisible to it. Semantic near-duplicate detection (MinHash/embeddings) is the known fix, tracked for the post-calibration roadmap.",
+  "trace": {
+    "id": "adv-repetition",
+    "problem": "Is 91 a prime number?",
+    "thinking": "I need to determine whether 91 has any divisors besides 1 and itself. The question is really whether some smaller number divides evenly into 91. What I should figure out is if 91 can be factored into smaller integers. Essentially the task is checking divisibility of 91 by the primes below its square root. Another way to phrase it: does any prime up to nine and a bit go into 91 cleanly? Put differently, I want to know if 91 splits into a product of two smaller numbers. Trying 7: seven times thirteen is 91. So 91 is not prime.",
+    "answer": "No, 91 = 7 × 13."
+  },
+  "expect_min": { "repetition_score": 95.0 }
+}

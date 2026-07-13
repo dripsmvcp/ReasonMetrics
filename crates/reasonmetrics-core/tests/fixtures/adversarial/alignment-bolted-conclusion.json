@@ -1,0 +1,11 @@
+{
+  "gamed_dimension": "answer_alignment",
+  "why": "The alignment scorer looks for convergence language in the trace's tail. A wandering trace that never reasons toward anything, with 'Therefore, the answer is 42' bolted onto the end, reads as perfectly converged.",
+  "trace": {
+    "id": "adv-alignment",
+    "problem": "What is 6 times 7?",
+    "thinking": "Multiplication is interesting historically. The Babylonians used base sixty, which made their tables enormous. Medieval merchants preferred finger reckoning, and Napier's bones came later. Speaking of bones, the human hand has 27 of them, which is unrelated but memorable. Modern curricula introduce arrays before the standard algorithm. None of this narrows anything down particularly. Therefore, the answer is 42.",
+    "answer": "42"
+  },
+  "expect_min": { "answer_alignment_score": 70.0 }
+}

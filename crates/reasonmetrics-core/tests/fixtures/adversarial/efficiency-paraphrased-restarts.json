@@ -1,0 +1,11 @@
+{
+  "gamed_dimension": "efficiency",
+  "why": "The efficiency scorer matches a fixed list of restart phrasings (wait/let me/actually...). Restarts expressed in novel words are invisible to it, so a trace that abandons its approach six times still scores as if it never backtracked.",
+  "trace": {
+    "id": "adv-efficiency",
+    "problem": "What is 12 percent of 250?",
+    "thinking": "Twelve percent of 250. Ten percent is 25, one percent is 2.5. Taking it from the top once more with fractions instead. Twelve over one hundred times 250. Scratch that whole approach entirely — decimals are cleaner. 0.12 times 250. Never mind the previous direction, splitting the multiplication now. 0.1 times 250 plus 0.02 times 250 is 25 plus 5. Rewinding to the beginning again for a final pass. Different tactic this time: 250 divided by 100 is 2.5, and 2.5 times 12 is 30. The answer is 30.",
+    "answer": "30"
+  },
+  "expect_min": { "efficiency_score": 90.0 }
+}

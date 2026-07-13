@@ -122,6 +122,8 @@ Accepts aliases: `question`/`prompt`/`query`/`input` for problem; `reasoning`/`c
 | 8 | Length Calibration | 7 % | Appropriate word-count range |
 | 9 | Accuracy-Efficiency | 0 % (opt-in) | Correct-but-bloated traces — harmonic mean of accuracy and token efficiency, per [LLMThinkBench](https://arxiv.org/abs/2507.04023); needs `expected_answer` |
 
+Scores are heuristics — a lens, not ground truth. The failure modes are documented and pinned by adversarial tests: see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+
 ## Validated Datasets
 
 Tested against 5 open-source reasoning-trace datasets (~940K total traces):

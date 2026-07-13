@@ -1,0 +1,11 @@
+{
+  "gamed_dimension": "self_verification",
+  "why": "The verification scorer credits verification PHRASES, not verification ACTS. Two explicit phrases in the last 40% of the trace score 100 even when nothing is actually checked — no substitution, no recomputation, just the words.",
+  "trace": {
+    "id": "adv-verification",
+    "problem": "A train travels 60 km in 45 minutes. What is its average speed in km/h?",
+    "thinking": "The train covers 60 km in 45 minutes. Three quarters of an hour, so the hourly rate has to be a bit more than 60. Scaling up by four thirds lands on 80 kilometers per hour. Sanity check: it feels about right for a train. Let me verify: yes, definitely correct.",
+    "answer": "80 km/h"
+  },
+  "expect_min": { "verification_score": 95.0 }
+}

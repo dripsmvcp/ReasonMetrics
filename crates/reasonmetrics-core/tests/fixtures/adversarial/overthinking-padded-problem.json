@@ -1,0 +1,12 @@
+{
+  "gamed_dimension": "overthinking",
+  "why": "Problem complexity is estimated largely from problem LENGTH, so burying a trivial question in irrelevant narrative quadruples the allowed thinking budget (expected_max ~500 → ~2100 words). Any 1,500-word ramble on this one-liner would score 100 purely because the QUESTION was padded.",
+  "trace": {
+    "id": "adv-overthinking",
+    "problem": "Maria runs a small bakery on the corner of Elm Street, a business her grandmother opened decades ago when the neighborhood was mostly orchards. Every morning she starts the ovens at four, checks the sourdough starters her cousin maintains on weekends, and reviews the delivery slate for the cafés downtown that took her croissants on consignment after the food festival two summers ago. On Tuesdays the flour supplier drops twelve sacks at the loading door, and the invoices go into a folder her accountant collects at the end of each month alongside the utility statements, the payroll ledger for her two part-time assistants, and the maintenance receipts for the secondhand proofing cabinet she bought at auction. Yesterday a customer ordered two dozen rolls for a church picnic and paid with exact change from a coin purse. With all of that going on, answer this: how many rolls are in two dozen?",
+    "thinking": "Two dozen means two times twelve. That is 24 rolls. Let me verify: a dozen is 12, and 12 + 12 = 24. ✓",
+    "answer": "24"
+  },
+  "expect_min": { "overthinking_score": 100.0 },
+  "expect_diag": [{ "scorer": "overthinking", "key": "expected_max", "min": 1900.0 }]
+}
