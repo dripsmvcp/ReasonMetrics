@@ -1,0 +1,7 @@
+{
+  "description": "GLM thinking-mode block",
+  "input": "<think>The question asks for 15% of 80. 10% is 8, 5% is 4, so 15% is 12. Let me verify: 0.15 × 80 = 12. ✓</think>15% of 80 is 12.",
+  "expected_thinking": "The question asks for 15% of 80. 10% is 8, 5% is 4, so 15% is 12. Let me verify: 0.15 × 80 = 12. ✓",
+  "input_json": { "reasoning_content": "10% of 80 is 8, so 15% is 12.", "content": "12" },
+  "expected_field_thinking": "10% of 80 is 8, so 15% is 12."
+}

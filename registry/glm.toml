@@ -1,0 +1,11 @@
+# GLM reasoning family — GLM-Z1 and the GLM-4.x thinking modes.
+
+id = "glm"
+display_name = "GLM reasoning family"
+notes = "Open-weight (Zhipu); thinking mode emits <think> blocks, OpenAI-compatible APIs surface reasoning_content. Pricing is host-dependent, so no cost table."
+
+fixture = "fixtures/glm.json"
+
+[extraction]
+think_tags = [["<think>", "</think>"]]
+reasoning_fields = ["reasoning_content"]
