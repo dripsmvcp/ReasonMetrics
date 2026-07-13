@@ -98,6 +98,28 @@ reasonmetrics init-config > my-scoring.toml              # dump default weights/
 
 Every command takes `--config <file>` (default: `reasonmetrics.toml` in the current directory — the repo root ships a ready-made one). To customize scoring, edit that file in place or pass a generated one: `reasonmetrics score --config my-scoring.toml -i traces.jsonl`. (Careful: `init-config > reasonmetrics.toml` at the repo root overwrites the tracked file.)
 
+## Python
+
+The same engine as a Python package (built with PyO3; releases the GIL and scores batches in parallel):
+
+```bash
+pip install reasonmetrics
+```
+
+```python
+import reasonmetrics as rm
+
+result = rm.score({"problem": "2+2?", "thinking": "<think>4. Let me verify: 2+2=4.</think>", "answer": "4", "id": "1"})
+result["scored"]["quality_score"]        # composite 0-100
+result["annotations"]                    # restart/verification/repetition spans
+
+scored = rm.score_many(records)          # parallel batch, list of the same dicts
+kept = [r for r in scored if r["scored"]["quality_score"] >= 70]
+
+rm.score(record, config={"weights": {"efficiency": 0.5}})   # reasonmetrics.toml-shaped overrides
+rm.registry()                            # embedded model-family registry
+```
+
 ## Input Format
 
 JSONL with one trace per line:

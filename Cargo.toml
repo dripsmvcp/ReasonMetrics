@@ -4,6 +4,7 @@ members = [
     "crates/reasonmetrics-core",
     "crates/reasonmetrics-cli",
     "crates/reasonmetrics-wasm",
+    "crates/reasonmetrics-py",
 ]
 
 [workspace.package]

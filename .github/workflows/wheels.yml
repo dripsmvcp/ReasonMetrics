@@ -1,0 +1,61 @@
+name: Python wheels
+
+# Builds abi3 wheels + sdist on py-v* tags and publishes to PyPI via trusted
+# publishing (OIDC). One-time setup: add this repo/workflow as a trusted
+# publisher for the `reasonmetrics` project on pypi.org, and create the
+# `pypi` environment in repo settings.
+
+on:
+  push:
+    tags: ["py-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    name: Build wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          args: --release --out dist -m crates/reasonmetrics-py/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: dist
+
+  sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist -m crates/reasonmetrics-py/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+  publish:
+    name: Publish to PyPI
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

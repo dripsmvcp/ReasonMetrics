@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "reasonmetrics"
+description = "Score LLM reasoning traces on nine quality dimensions — fast, local, no GPU"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["llm", "reasoning", "chain-of-thought", "training-data", "data-curation"]
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/dripsmvcp/ReasonMetrics"
+
+[tool.maturin]
+features = ["extension-module"]
