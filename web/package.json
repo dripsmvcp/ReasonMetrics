@@ -1,0 +1,33 @@
+{
+  "name": "reasonmetrics-web",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "build:wasm": "wasm-pack build ../crates/reasonmetrics-wasm --target web --out-dir ../../web/src/pkg",
+    "pretest": "npm run build:wasm",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "fast-check": "^4.9.0",
+    "happy-dom": "^20.10.6",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "lz-string": "^1.5.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}

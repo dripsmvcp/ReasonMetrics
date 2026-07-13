@@ -1,0 +1,19 @@
+{
+  "id": "concise-qwen",
+  "label": "Concise Qwen",
+  "description": "qwen3:1.7b answering an easy question briefly and cleanly",
+  "model": "qwen3:1.7b",
+  "problem": "What is 2 + 2? Answer in one sentence.",
+  "thinking": "Okay, the user is asking for the answer to 2 + 2 in one sentence. Let me think. The straightforward answer is 4. But they want it in one sentence. So I need to make sure it's concise. Maybe start with \"2 + 2 equals\" and then add the result. Check if there's any need for extra details. Since it's a simple math problem, no complications. Just state the answer clearly. Alright, that should work.\n",
+  "answer": "2 + 2 equals 4.",
+  "generated_with": {
+    "prompt": "What is 2 + 2? Answer in one sentence.",
+    "options": {
+      "temperature": 0.7,
+      "num_predict": 1200,
+      "num_thread": 3,
+      "seed": 11
+    }
+  },
+  "curated": false
+}

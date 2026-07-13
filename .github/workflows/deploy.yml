@@ -1,0 +1,67 @@
+name: Deploy web app
+
+on:
+  push:
+    tags: ["web-v*"]
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer tag supersedes an in-flight run's wait,
+# but never cancels an in-progress Pages deployment.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build wasm + web bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+      - name: Build wasm package
+        run: npm run build:wasm
+        working-directory: web
+      - name: Build web bundle
+        run: npm run build
+        working-directory: web
+        env:
+          BASE_PATH: /reasonmetrics/
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # First tag on a fresh repo: enable Pages (source = Actions) if not already
+          enablement: true
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

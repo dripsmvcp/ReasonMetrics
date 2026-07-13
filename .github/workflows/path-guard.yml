@@ -1,0 +1,30 @@
+name: path-guard
+
+# Fails any external PR that touches maintainer-only paths (CONTRIBUTING.md
+# "Ownership zones"). Uses only the read-only API token — safe on fork PRs,
+# no checkout of untrusted code.
+
+on:
+  pull_request:
+
+permissions:
+  pull-requests: read
+
+jobs:
+  guard:
+    if: github.event.pull_request.user.login != 'dripsmvcp'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check maintainer-only paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/pulls/$PR/files" --paginate -q '.[].filename' > changed.txt
+          PROTECTED='^(crates/reasonmetrics-core/|crates/reasonmetrics-wasm/src/|\.github/|Cargo\.toml$|docs/launch\.md$)'
+          if grep -E "$PROTECTED" changed.txt; then
+            echo "::error::This PR modifies maintainer-only paths (see the Ownership zones section of CONTRIBUTING.md). Please open an issue to discuss the change instead."
+            exit 1
+          fi
+          echo "No maintainer-only paths touched."

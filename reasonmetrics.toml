@@ -1,0 +1,27 @@
+[input]
+strict = false
+
+[scoring.weights]
+efficiency = 0.20
+language = 0.12
+alignment = 0.18
+structure = 0.10
+repetition = 0.15
+overthinking = 0.10
+verification = 0.08
+length = 0.07
+
+[scoring.efficiency]
+restart_penalty_per_1k = 8.0
+
+[scoring.language]
+num_chunks = 10
+min_words_per_chunk = 20
+
+[scoring.length]
+sweet_spot_min = 200
+sweet_spot_max = 3000
+
+[output]
+min_score = 70.0      # Used by `filter` when --min-score is omitted
+format = "parquet"    # Used by `score` when -o/--output is omitted

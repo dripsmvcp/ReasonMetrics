@@ -1,0 +1,11 @@
+/target
+*.jsonl
+!crates/*/tests/fixtures/*.jsonl
+showcase/*.parquet
+showcase/*.html
+!showcase/*_report.html
+pkg/
+
+# local agent/session scratch — never publish
+.superpowers/
+.playwright-mcp/

@@ -1,0 +1,32 @@
+[package]
+name = "reasonmetrics-cli"
+description = "Reasoning trace quality auditor for LLM training data"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "reasonmetrics"
+path = "src/main.rs"
+
+[dependencies]
+reasonmetrics-core = { path = "../reasonmetrics-core" }
+
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rayon = "1.10"
+indicatif = { version = "0.17", features = ["rayon"] }
+anyhow = "1"
+arrow = { version = "54", features = ["prettyprint"] }
+parquet = { version = "54", features = ["arrow"] }
+flate2 = "1.0"
+minijinja = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"

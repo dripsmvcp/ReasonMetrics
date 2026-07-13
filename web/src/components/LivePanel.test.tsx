@@ -1,0 +1,356 @@
+// @vitest-environment happy-dom
+
+// Component tests for the Live (Ollama) panel: settings persistence, model
+// picker population, CORS vs HTTP error rendering, start/stop streaming,
+// and abort semantics. `listModels`/`streamChat` are mocked (real parsing
+// behavior is covered directly against `streamChat` in ../lib/ollama.test.ts);
+// `throttle`/`toTraceInput` are left real so the throttled wiring here is
+// exercised end to end. "Activation" (the old panel.activate()) is now the
+// `active` prop flipping true, driven via `rerender`.
+
+import { fireEvent, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { OllamaHttpError } from "../lib/ollama";
+import type { TraceInput } from "../lib/types";
+import { LivePanel } from "./LivePanel";
+
+vi.mock("../lib/ollama", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/ollama")>();
+  return {
+    ...actual,
+    listModels: vi.fn(),
+    streamChat: vi.fn(),
+  };
+});
+
+import { listModels, streamChat } from "../lib/ollama";
+
+const listModelsMock = vi.mocked(listModels);
+const streamChatMock = vi.mocked(streamChat);
+
+function setup(initialActive = false) {
+  const onAnalyze = vi.fn<(record: TraceInput) => void>();
+  const { container, rerender } = render(<LivePanel onAnalyze={onAnalyze} active={initialActive} />);
+
+  function activate() {
+    rerender(<LivePanel onAnalyze={onAnalyze} active={true} />);
+  }
+
+  return {
+    container,
+    onAnalyze,
+    activate,
+    rerender,
+    baseUrlInput: container.querySelector<HTMLInputElement>("input.live-base-url")!,
+    modelSelect: container.querySelector<HTMLSelectElement>("select.live-model")!,
+    promptBox: container.querySelector<HTMLTextAreaElement>("textarea.live-prompt")!,
+    startButton: container.querySelector<HTMLButtonElement>("button.live-start")!,
+    errorArea: container.querySelector<HTMLParagraphElement>("p.live-error")!,
+    refreshButton: container.querySelector<HTMLButtonElement>("button.live-refresh")!,
+  };
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  listModelsMock.mockReset().mockResolvedValue(["llama3", "tinyllama"]);
+  streamChatMock.mockReset();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+describe("LivePanel: settings", () => {
+  it("defaults the base URL to localhost:11434 without loading models on mount", () => {
+    const { baseUrlInput } = setup();
+
+    expect(baseUrlInput.value).toBe("http://localhost:11434");
+    expect(listModelsMock).not.toHaveBeenCalled();
+  });
+
+  it("restores a persisted base URL from localStorage without loading models on mount", () => {
+    localStorage.setItem("reasonmetrics.ollama.baseUrl", "http://localhost:9999");
+    localStorage.setItem("reasonmetrics.ollama.model", "tinyllama");
+    listModelsMock.mockResolvedValue(["llama3", "tinyllama"]);
+
+    const { baseUrlInput } = setup();
+
+    expect(baseUrlInput.value).toBe("http://localhost:9999");
+    expect(listModelsMock).not.toHaveBeenCalled();
+  });
+
+  it("persists base URL and model changes to localStorage", async () => {
+    const { activate, baseUrlInput, modelSelect } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    fireEvent.change(baseUrlInput, { target: { value: "http://localhost:12345" } });
+    fireEvent.change(modelSelect, { target: { value: "tinyllama" } });
+
+    expect(localStorage.getItem("reasonmetrics.ollama.baseUrl")).toBe("http://localhost:12345");
+    expect(localStorage.getItem("reasonmetrics.ollama.model")).toBe("tinyllama");
+  });
+});
+
+describe("LivePanel: deferred model probe (no auto-connect on load)", () => {
+  it("does not call listModels (no network probe) at mount time", () => {
+    setup();
+    expect(listModelsMock).not.toHaveBeenCalled();
+  });
+
+  it("loads models on first activation, and the Refresh button still works before activation", async () => {
+    const { activate, modelSelect } = setup();
+    expect(listModelsMock).not.toHaveBeenCalled();
+
+    activate();
+    await vi.waitFor(() => expect(listModelsMock).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+  });
+
+  it("does not re-probe on repeated activations", async () => {
+    const { rerender, onAnalyze } = setup();
+
+    rerender(<LivePanel onAnalyze={onAnalyze} active={true} />);
+    await vi.waitFor(() => expect(listModelsMock).toHaveBeenCalledTimes(1));
+
+    rerender(<LivePanel onAnalyze={onAnalyze} active={false} />);
+    rerender(<LivePanel onAnalyze={onAnalyze} active={true} />);
+    expect(listModelsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the Refresh models button still probes explicitly, independent of activation", async () => {
+    const { refreshButton } = setup();
+    expect(listModelsMock).not.toHaveBeenCalled();
+
+    fireEvent.click(refreshButton);
+    await vi.waitFor(() => expect(listModelsMock).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("LivePanel: storage resilience", () => {
+  it("mounts with defaults when localStorage throws on access (e.g. blocked storage)", () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("The operation is insecure.", "SecurityError");
+    });
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("The operation is insecure.", "SecurityError");
+    });
+
+    try {
+      const onAnalyze = vi.fn<(record: TraceInput) => void>();
+      let container!: HTMLElement;
+
+      expect(() => {
+        container = render(<LivePanel onAnalyze={onAnalyze} active={false} />).container;
+      }).not.toThrow();
+
+      const baseUrlInput = container.querySelector<HTMLInputElement>("input.live-base-url")!;
+      expect(baseUrlInput.value).toBe("http://localhost:11434");
+    } finally {
+      getItemSpy.mockRestore();
+      setItemSpy.mockRestore();
+    }
+  });
+
+  it("does not throw when persisting settings while storage is blocked", async () => {
+    const { activate, baseUrlInput, modelSelect } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("The operation is insecure.", "SecurityError");
+    });
+
+    try {
+      expect(() =>
+        fireEvent.change(baseUrlInput, { target: { value: "http://localhost:12345" } }),
+      ).not.toThrow();
+    } finally {
+      setItemSpy.mockRestore();
+    }
+  });
+});
+
+describe("LivePanel: error rendering", () => {
+  it("renders the OLLAMA_ORIGINS instruction with the real origin on a network/CORS error", async () => {
+    listModelsMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const { activate, errorArea } = setup();
+    activate();
+
+    await vi.waitFor(() => expect(errorArea.hidden).toBe(false));
+    expect(errorArea.textContent).toContain(`OLLAMA_ORIGINS=${location.origin} ollama serve`);
+    expect(errorArea.textContent?.toLowerCase()).toContain("cross-origin");
+  });
+
+  it("shows the HTTP status for a non-2xx response without the CORS instructions", async () => {
+    listModelsMock.mockRejectedValue(new OllamaHttpError(500, "boom"));
+
+    const { activate, errorArea } = setup();
+    activate();
+
+    await vi.waitFor(() => expect(errorArea.hidden).toBe(false));
+    expect(errorArea.textContent).toContain("500");
+    expect(errorArea.textContent).not.toContain("OLLAMA_ORIGINS");
+  });
+});
+
+describe("LivePanel: no model selected guard", () => {
+  it("shows an inline error and never calls streamChat when Start is clicked with no model loaded", () => {
+    const { promptBox, startButton, errorArea } = setup();
+    // Deliberately never activated: the model list never loaded, so
+    // selectedModel is still "".
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    fireEvent.click(startButton);
+
+    expect(streamChatMock).not.toHaveBeenCalled();
+    expect(errorArea.hidden).toBe(false);
+    expect(errorArea.textContent?.toLowerCase()).toContain("no model selected");
+    expect(errorArea.textContent?.toLowerCase()).toContain("refresh models");
+    expect(startButton.textContent).toBe("Start");
+  });
+});
+
+describe("LivePanel: streaming", () => {
+  it("streams deltas through to onAnalyze using the thinking/content trace-assembly rule", async () => {
+    let captured: Parameters<typeof streamChat>[0] | undefined;
+    streamChatMock.mockImplementation(async (opts) => {
+      captured = opts;
+      opts.onDelta({ thinking: "reasoning so far", content: "" });
+      opts.onDone({ thinking: "reasoning so far", content: "final answer" });
+    });
+
+    const { activate, promptBox, modelSelect, startButton, onAnalyze } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    fireEvent.click(startButton);
+
+    await vi.waitFor(() => expect(onAnalyze).toHaveBeenCalledTimes(2));
+    expect(onAnalyze).toHaveBeenNthCalledWith(1, {
+      problem: "2+2?",
+      thinking: "reasoning so far",
+      answer: "",
+    });
+    expect(onAnalyze).toHaveBeenNthCalledWith(2, {
+      problem: "2+2?",
+      thinking: "reasoning so far",
+      answer: "final answer",
+    });
+    expect(captured?.model).toBe("llama3");
+    expect(captured?.baseUrl).toBe("http://localhost:11434");
+  });
+
+  it("falls back to accumulated content as thinking when no thinking fragments ever arrive", async () => {
+    streamChatMock.mockImplementation(async (opts) => {
+      opts.onDelta({ thinking: "", content: "partial" });
+      opts.onDone({ thinking: "", content: "partial answer" });
+    });
+
+    const { activate, promptBox, modelSelect, startButton, onAnalyze } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    fireEvent.change(promptBox, { target: { value: "hi" } });
+    fireEvent.click(startButton);
+
+    await vi.waitFor(() => expect(onAnalyze).toHaveBeenCalledTimes(2));
+    expect(onAnalyze).toHaveBeenNthCalledWith(2, {
+      problem: "hi",
+      thinking: "partial answer",
+      answer: "",
+    });
+  });
+
+  it("swaps Start to Stop while streaming and back to Start when done", async () => {
+    let resolveStream: () => void;
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((resolve) => {
+          resolveStream = () => {
+            opts.onDone({ thinking: "", content: "x" });
+            resolve();
+          };
+        }),
+    );
+
+    const { activate, promptBox, modelSelect, startButton } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    fireEvent.change(promptBox, { target: { value: "hi" } });
+
+    fireEvent.click(startButton);
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Stop"));
+
+    resolveStream!();
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+  });
+
+  it("cancels a pending trailing analysis synchronously at Stop time", async () => {
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((resolve, reject) => {
+          // Two rapid deltas: the first fires the throttle's leading edge,
+          // the second leaves a trailing call pending when Stop is clicked.
+          opts.onDelta({ thinking: "", content: "a" });
+          opts.onDelta({ thinking: "", content: "ab" });
+          opts.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+          void resolve;
+        }),
+    );
+
+    const { activate, promptBox, modelSelect, startButton, onAnalyze } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    vi.useFakeTimers();
+    fireEvent.change(promptBox, { target: { value: "hi" } });
+
+    fireEvent.click(startButton); // Start
+    expect(onAnalyze).toHaveBeenCalledTimes(1); // leading edge only
+
+    fireEvent.click(startButton); // Stop
+    vi.advanceTimersByTime(1000);
+    expect(onAnalyze).toHaveBeenCalledTimes(1); // trailing call must not fire
+
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+    expect(onAnalyze).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts via the Stop button, keeps the last analysis, and shows no error", async () => {
+    let signalRef: AbortSignal | undefined;
+    let rejectStream: (err: unknown) => void;
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((resolve, reject) => {
+          signalRef = opts.signal;
+          rejectStream = reject;
+          opts.onDelta({ thinking: "", content: "partial" });
+          opts.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+          void resolve;
+        }),
+    );
+
+    const { activate, promptBox, modelSelect, startButton, errorArea, onAnalyze } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    fireEvent.change(promptBox, { target: { value: "hi" } });
+
+    fireEvent.click(startButton);
+    await vi.waitFor(() => expect(onAnalyze).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(startButton); // Stop
+    expect(signalRef?.aborted).toBe(true);
+    void rejectStream!;
+
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+    expect(errorArea.hidden).toBe(true);
+    expect(onAnalyze).toHaveBeenCalledTimes(1);
+  });
+});

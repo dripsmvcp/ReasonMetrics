@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ReasonMetrics Quality Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a;
+         background: #fafafa; line-height: 1.6; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+  .summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .stat-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+               padding: 1rem 1.5rem; flex: 1; min-width: 150px; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 700; }
+  .stat-card .label { font-size: 0.85rem; color: #6b7280; }
+  table { width: 100%; border-collapse: collapse; background: white;
+          border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+  th { background: #f9fafb; font-weight: 600; font-size: 0.85rem; color: #374151; }
+  .bar-bg { background: #e5e7eb; height: 18px; border-radius: 9px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 9px; }
+  .good { background: #22c55e; }
+  .okay { background: #f59e0b; }
+  .bad  { background: #ef4444; }
+  .trace-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+                padding: 1rem; margin-bottom: 1rem; }
+  .trace-card .header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+  .trace-card .id { font-weight: 600; }
+  .trace-card .score { font-weight: 700; }
+  .trace-card .issues { list-style: none; padding: 0; margin: 0.5rem 0; }
+  .trace-card .issues li { color: #dc2626; font-size: 0.85rem; }
+  .trace-card .issues li::before { content: "⚠ "; }
+  .trace-preview { background: #f9fafb; padding: 0.75rem; border-radius: 6px;
+                   font-family: 'SF Mono', Consolas, monospace; font-size: 0.8rem;
+                   white-space: pre-wrap; word-break: break-word; max-height: 150px;
+                   overflow-y: auto; color: #4b5563; border: 1px solid #e5e7eb; }
+  .footer { margin-top: 3rem; padding: 1rem 0; border-top: 1px solid #e5e7eb;
+            font-size: 0.8rem; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<h1>ReasonMetrics Quality Report</h1>
+<p style="color:#6b7280">5000 traces analyzed</p>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="value">72.2</div>
+    <div class="label">Avg Quality Score</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">4910 <span style="font-size:0.9rem;color:#6b7280">(98.2%)</span></div>
+    <div class="label">High Quality (≥70)</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">0</div>
+    <div class="label">Language Mixed</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">4547</div>
+    <div class="label">No Self-Verification</div>
+  </div>
+</div>
+
+<h2>Score Distribution by Dimension</h2>
+<table>
+<tr><th>Dimension</th><th>Average</th><th style="width:40%">Distribution</th><th>% High (≥80)</th></tr>
+
+<tr>
+  <td>Efficiency</td>
+  <td>99.8/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.8%"></div></div></td>
+  <td>100.0%</td>
+</tr>
+
+<tr>
+  <td>Language Consistency</td>
+  <td>100.0/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:100.0%"></div></div></td>
+  <td>100.0%</td>
+</tr>
+
+<tr>
+  <td>Answer Alignment</td>
+  <td>1.9/100</td>
+  <td><div class="bar-bg"><div class="bar-fill bad" style="width:1.9%"></div></div></td>
+  <td>0.0%</td>
+</tr>
+
+<tr>
+  <td>Structural Clarity</td>
+  <td>51.7/100</td>
+  <td><div class="bar-bg"><div class="bar-fill okay" style="width:51.7%"></div></div></td>
+  <td>0.1%</td>
+</tr>
+
+<tr>
+  <td>Repetition</td>
+  <td>100.0/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:100.0%"></div></div></td>
+  <td>100.0%</td>
+</tr>
+
+<tr>
+  <td>Overthinking</td>
+  <td>100.0/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:100.0%"></div></div></td>
+  <td>100.0%</td>
+</tr>
+
+<tr>
+  <td>Self-Verification</td>
+  <td>34.6/100</td>
+  <td><div class="bar-bg"><div class="bar-fill bad" style="width:34.6%"></div></div></td>
+  <td>7.1%</td>
+</tr>
+
+<tr>
+  <td>Length Calibration</td>
+  <td>99.6/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.6%"></div></div></td>
+  <td>99.0%</td>
+</tr>
+
+</table>
+
+<h2>Top 10 Lowest Quality Traces</h2>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_4897</span>
+    <span class="score" style="color:#dc2626">67.6/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Alright, let&#x27;s think about this case for a moment. Here we have a 34-year-old black woman who&#x27;s come in with some pretty concerning symptoms: she&#x27;s coughing, struggling to breathe, has swollen lymph nodes, and even her liver seems enlarged. Plus, her chest X-ray isn&#x27;t looking normal. What&#x27;s going on here? 
+
+First off, considering her background and symptoms, sarcoidosis is definitely ringing some bells. It tends to hit people within her demographic pretty frequently. But, hmm, I can&#x27;t just leap ...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_449</span>
+    <span class="score" style="color:#dc2626">67.6/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Let&#x27;s see, this patient has some pretty specific symptoms. Pinpoint pupils, salivation, and lots of tears. That combo really screams cholinergic activity—maybe something blocking cholinesterase. 
+
+Okay, now the red tears are curious. That&#x27;s not something you hear about every day. Could it be related to some rare toxin? I remember ricin could cause discolored tears, but it doesn&#x27;t fit the cholinesterase picture. Hmm. 
+
+Thinking about the significant drop in plasma cholinesterase, being only at 30...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_4988</span>
+    <span class="score" style="color:#dc2626">67.9/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Alright, let&#x27;s figure this out. The question is about a classification for non-Hodgkin&#x27;s lymphoma proposed by the International Lymphoma Study Group. Sounds familiar, but I need to zero in on which one it might be. 
+
+Thinking about lymphoma classifications, there are a few different ones to consider. Let&#x27;s see, we&#x27;ve had the Working Formulation, which was one of the earlier methods. Then there&#x27;s something more recent like the REAL classification and the WHO classification. 
+
+Okay, so back to the...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_1413</span>
+    <span class="score" style="color:#dc2626">67.9/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Alright, so we have a 37-year-old pregnant woman, and she&#x27;s 28 weeks along. Her blood sugar levels are acting up even though she&#x27;s trying to manage them with diet and exercise. That&#x27;s a classic case of gestational diabetes that isn&#x27;t responding to lifestyle tweaks.
+
+Let&#x27;s think about treatment. Insulin usually pops up as the go-to option here. Why insulin? Well, it’s been used for ages during pregnancy and is known to be safe, which is exactly what you want.
+
+So what does insulin do? Imagine it ...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_2701</span>
+    <span class="score" style="color:#dc2626">67.9/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Alright, let&#x27;s think about ADEM first. I know acute disseminated encephalomyelitis is something that typically happens all at once. It&#x27;s like one big flair after something else triggers it—maybe a nasty cold or a recent vaccination. People usually have just that one episode.
+
+Now let&#x27;s switch to multiple sclerosis. This one&#x27;s quite different. MS doesn’t hit you all at once like ADEM. Instead, it’s more of a back-and-forth thing, with symptoms coming, going, and coming again. Over time, it can ge...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_1669</span>
+    <span class="score" style="color:#dc2626">67.9/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Okay, let&#x27;s think this through. A 32-year-old woman is dealing with some uncomfortable symptoms: vaginal burning, itching, and pain during intercourse. She also mentioned a thick, white discharge. That sounds pretty typical for a yeast infection. 
+
+Ah, and she was on antibiotics recently. Makes sense – antibiotics can knock out the natural bacteria that keep yeast in check, which often leads to overgrowth of Candida, the usual suspect in these cases. 
+
+The KOH test results show budding filaments...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_4403</span>
+    <span class="score" style="color:#dc2626">67.9/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Okay, so we&#x27;re looking for a sulfonamide, which makes me think of antibiotics that target bacteria by interfering with their growth. Specifically, we need one effective against Pseudomonas, a notorious troublemaker in infections, especially in burn wounds. Hmm, what about those topical treatments used for burns? People often use specific creams or ointments on burn wounds to prevent infection and help the healing process. 
+
+Now, if I recall correctly, silver sulfadiazine often comes up in discus...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_2470</span>
+    <span class="score" style="color:#dc2626">68.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Alright, I&#x27;m thinking about scoliosis and how doctors measure it using X-rays. Let&#x27;s see, scoliosis involves a curvature of the spine, and there&#x27;s a standard way doctors assess how severe that curve is. They definitely use some kind of angle to figure this out. 
+
+Now, if I recall correctly, in the medical field, there’s a specific angle that&#x27;s pretty standard for evaluating these spinal curves. It&#x27;s on the tip of my tongue. It&#x27;s not just any angle measurement, it&#x27;s a particular one that comes up...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_4426</span>
+    <span class="score" style="color:#dc2626">68.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">I know superantigens are pretty aggressive in how they interact with the immune system. They don&#x27;t go through the usual steps and just jump straight into activating T-cells like crazy. This makes the immune system go into overdrive.
+
+Now, when I think about Staphylococcus aureus, it&#x27;s pretty well-known that this bacterium can produce some of these superantigens. One of its nasty tricks is causing conditions like toxic shock syndrome by releasing these powerful toxins.
+
+So, let&#x27;s see, which speci...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: medical_1326</span>
+    <span class="score" style="color:#dc2626">68.2/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Okay, let&#x27;s break this down a bit. The question is asking about a sampling method where units or members are picked at regular intervals. That automatically makes me think of something methodical and consistent, right? It’s like there’s some kind of repeating pattern or formula at work here.
+
+Now, if I remember correctly, in sampling methods, when you pick members at certain regular steps or gaps - like every nth number - that rings a bell. It’s a structured approach and not just random picking....</div>
+</div>
+
+
+<div class="footer">
+  Generated by <strong>ReasonMetrics</strong> — Reasoning trace quality auditor
+</div>
+
+</body>
+</html>

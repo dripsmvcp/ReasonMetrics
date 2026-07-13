@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/reasonmetrics-core",
+    "crates/reasonmetrics-cli",
+    "crates/reasonmetrics-wasm",
+]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true  # Smaller binary — removes debug symbols

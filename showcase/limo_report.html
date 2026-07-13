@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ReasonMetrics Quality Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a;
+         background: #fafafa; line-height: 1.6; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+  .summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .stat-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+               padding: 1rem 1.5rem; flex: 1; min-width: 150px; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 700; }
+  .stat-card .label { font-size: 0.85rem; color: #6b7280; }
+  table { width: 100%; border-collapse: collapse; background: white;
+          border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+  th { background: #f9fafb; font-weight: 600; font-size: 0.85rem; color: #374151; }
+  .bar-bg { background: #e5e7eb; height: 18px; border-radius: 9px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 9px; }
+  .good { background: #22c55e; }
+  .okay { background: #f59e0b; }
+  .bad  { background: #ef4444; }
+  .trace-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+                padding: 1rem; margin-bottom: 1rem; }
+  .trace-card .header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+  .trace-card .id { font-weight: 600; }
+  .trace-card .score { font-weight: 700; }
+  .trace-card .issues { list-style: none; padding: 0; margin: 0.5rem 0; }
+  .trace-card .issues li { color: #dc2626; font-size: 0.85rem; }
+  .trace-card .issues li::before { content: "⚠ "; }
+  .trace-preview { background: #f9fafb; padding: 0.75rem; border-radius: 6px;
+                   font-family: 'SF Mono', Consolas, monospace; font-size: 0.8rem;
+                   white-space: pre-wrap; word-break: break-word; max-height: 150px;
+                   overflow-y: auto; color: #4b5563; border: 1px solid #e5e7eb; }
+  .footer { margin-top: 3rem; padding: 1rem 0; border-top: 1px solid #e5e7eb;
+            font-size: 0.8rem; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<h1>ReasonMetrics Quality Report</h1>
+<p style="color:#6b7280">817 traces analyzed</p>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="value">92.0</div>
+    <div class="label">Avg Quality Score</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">816 <span style="font-size:0.9rem;color:#6b7280">(99.9%)</span></div>
+    <div class="label">High Quality (≥70)</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">28</div>
+    <div class="label">Language Mixed</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">22</div>
+    <div class="label">No Self-Verification</div>
+  </div>
+</div>
+
+<h2>Score Distribution by Dimension</h2>
+<table>
+<tr><th>Dimension</th><th>Average</th><th style="width:40%">Distribution</th><th>% High (≥80)</th></tr>
+
+<tr>
+  <td>Efficiency</td>
+  <td>94.3/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:94.3%"></div></div></td>
+  <td>98.5%</td>
+</tr>
+
+<tr>
+  <td>Language Consistency</td>
+  <td>99.2/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.2%"></div></div></td>
+  <td>98.9%</td>
+</tr>
+
+<tr>
+  <td>Answer Alignment</td>
+  <td>99.1/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.1%"></div></div></td>
+  <td>99.5%</td>
+</tr>
+
+<tr>
+  <td>Structural Clarity</td>
+  <td>76.1/100</td>
+  <td><div class="bar-bg"><div class="bar-fill okay" style="width:76.1%"></div></div></td>
+  <td>34.1%</td>
+</tr>
+
+<tr>
+  <td>Repetition</td>
+  <td>96.8/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:96.8%"></div></div></td>
+  <td>98.5%</td>
+</tr>
+
+<tr>
+  <td>Overthinking</td>
+  <td>76.0/100</td>
+  <td><div class="bar-bg"><div class="bar-fill okay" style="width:76.0%"></div></div></td>
+  <td>53.7%</td>
+</tr>
+
+<tr>
+  <td>Self-Verification</td>
+  <td>90.8/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:90.8%"></div></div></td>
+  <td>86.8%</td>
+</tr>
+
+<tr>
+  <td>Length Calibration</td>
+  <td>90.8/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:90.8%"></div></div></td>
+  <td>80.3%</td>
+</tr>
+
+</table>
+
+<h2>Top 10 Lowest Quality Traces</h2>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_636</span>
+    <span class="score" style="color:#dc2626">66.5/100</span>
+  </div>
+  <ul class="issues">
+    <li>Language mixing detected</li><li>High repetition</li><li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Okay, so I need to find the greatest integer less than 1000 that is a palindrome both in base ten (decimal) and base eight (octal). The example given is 292, which is 444 in octal. Let me start by understanding the problem step by step.
+
+First, let&#x27;s recap what a palindrome is. A palindrome is a number that reads the same forwards and backwards. For example, 121 is a palindrome in base ten because reversing the digits still gives 121. Similarly, in base eight, a number like 444 (which is 292 in ...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_129</span>
+    <span class="score" style="color:#dc2626">77.0/100</span>
+  </div>
+  <ul class="issues">
+    <li>High repetition</li>
+  </ul>
+  <div class="trace-preview">Okay, let&#x27;s try to tackle this problem step by step. The problem says: For a positive integer \( n \), let \( d_n \) be the units digit of \( 1 + 2 + \dots + n \). We need to find the remainder when the sum \( \sum_{n=1}^{2017} d_n \) is divided by 1000. 
+
+First, I need to understand what exactly is being asked here. So, for each number \( n \) from 1 to 2017, we calculate the sum \( 1 + 2 + \dots + n \), which is the nth triangular number, and then take the units digit of that sum. That units d...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_287</span>
+    <span class="score" style="color:#dc2626">78.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Okay, so there&#x27;s this problem here about a set containing four numbers, and the six pairwise sums of distinct elements are given as 189, 320, 287, 234, x, and y. We need to find the greatest possible value of x + y. Alright, let&#x27;s try to figure this out step by step.
+
+First, let me recall that when you have four numbers, say a, b, c, d, the pairwise sums would be a+b, a+c, a+d, b+c, b+d, and c+d. So there are six sums in total. These sums are given in no particular order, which complicates thing...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_99</span>
+    <span class="score" style="color:#dc2626">78.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Okay, so I have this problem where triangle ABC is divided into six smaller triangles by lines drawn from the vertices through a common interior point. The areas of four of these triangles are given, and I need to find the area of the entire triangle ABC. Hmm, let me visualize this. There&#x27;s a common interior point, so probably three lines each from a vertex passing through this point, creating six smaller triangles. Four of their areas are known, and I have to find the total area.
+
+First, I shou...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_307</span>
+    <span class="score" style="color:#dc2626">78.5/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Okay, let&#x27;s try to tackle this problem step by step. It involves geometry with spheres and planes, so I need to visualize the setup first. 
+
+We have two spheres with radius 36 and one sphere with radius 13. Each of these spheres is externally tangent to the other two and also tangent to two different planes, P and Q. The intersection of these two planes is the line ℓ. We need to find the distance from ℓ to the point where the radius 13 sphere is tangent to plane P. The answer should be in the fo...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_326</span>
+    <span class="score" style="color:#dc2626">78.9/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Okay, so I need to find the number of lattice points on the hyperbola defined by the equation x² - y² = 2000². A lattice point is a point where both x and y are integers. So, essentially, I need to find all integer solutions (x, y) such that when I plug them into the equation, it satisfies x² - y² = 2000².
+
+First, let me recall that hyperbolas can have different forms, and this one is of the form x² - y² = a², which is a standard hyperbola centered at the origin, opening to the left and right al...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_51</span>
+    <span class="score" style="color:#dc2626">80.3/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Alright, so I need to figure out the number of possible integer values for the area \( K \) of rhombus \( T \) in this hexagon divided into five rhombuses. The other four rhombuses \( P, Q, R, S \) are congruent and each has an area of \( \sqrt{2006} \). 
+
+First, let me visualize the hexagon. The Asymptote code draws a hexagon with points \( A, B, C, D, EE, F \). Then there are some internal lines creating rhombuses \( P, Q, R, S, T \). The labels suggest that \( T \) is in the center, with \( P...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_157</span>
+    <span class="score" style="color:#dc2626">80.4/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Okay, so I have this problem here about a right triangle ABC with a right angle at C. The hypotenuse AB has a length of 60, and the medians through A and B lie along the lines y = x + 3 and y = 2x + 4 respectively. I need to find the area of triangle ABC. Hmm, let&#x27;s see. I remember that in a triangle, the median is a line from a vertex to the midpoint of the opposite side. Since it&#x27;s a right triangle, maybe there are some properties related to medians in right triangles that I can use?
+
+First, l...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_739</span>
+    <span class="score" style="color:#dc2626">80.4/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Okay, so there&#x27;s this problem where a semicircle with diameter d is inside a square with sides of length 8. They say the maximum value of d is m - sqrt(n), and we need to find m + n. Hmm. Let me try to visualize this first.
+
+Alright, the square has sides of 8 units. So each side is 8. The semicircle has to be entirely contained within this square. The diameter of the semicircle is d, and we need to find the maximum possible d such that the semicircle doesn&#x27;t go outside the square. Then express t...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_346</span>
+    <span class="score" style="color:#dc2626">80.5/100</span>
+  </div>
+  <ul class="issues">
+    <li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">Alright, I have this problem about finding the sum of the areas of all triangles that can be formed with vertices from a 1 by 1 by 1 cube. The answer is given as \( m + \sqrt{n} + \sqrt{p} \) where \( m, n, \) and \( p \) are integers, and I need to find the sum \( m + n + p \).
+
+First, let me visualize the cube. It&#x27;s a unit cube, so each edge is 1 unit long. The cube has 8 vertices, and I need to consider all possible triangles formed by these vertices. 
+
+Wait, to form a triangle, I need 3 non-...</div>
+</div>
+
+
+<div class="footer">
+  Generated by <strong>ReasonMetrics</strong> — Reasoning trace quality auditor
+</div>
+
+</body>
+</html>

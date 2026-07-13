@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ReasonMetrics Quality Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+         max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a;
+         background: #fafafa; line-height: 1.6; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+  .summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .stat-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+               padding: 1rem 1.5rem; flex: 1; min-width: 150px; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 700; }
+  .stat-card .label { font-size: 0.85rem; color: #6b7280; }
+  table { width: 100%; border-collapse: collapse; background: white;
+          border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+  th { background: #f9fafb; font-weight: 600; font-size: 0.85rem; color: #374151; }
+  .bar-bg { background: #e5e7eb; height: 18px; border-radius: 9px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 9px; }
+  .good { background: #22c55e; }
+  .okay { background: #f59e0b; }
+  .bad  { background: #ef4444; }
+  .trace-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+                padding: 1rem; margin-bottom: 1rem; }
+  .trace-card .header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+  .trace-card .id { font-weight: 600; }
+  .trace-card .score { font-weight: 700; }
+  .trace-card .issues { list-style: none; padding: 0; margin: 0.5rem 0; }
+  .trace-card .issues li { color: #dc2626; font-size: 0.85rem; }
+  .trace-card .issues li::before { content: "⚠ "; }
+  .trace-preview { background: #f9fafb; padding: 0.75rem; border-radius: 6px;
+                   font-family: 'SF Mono', Consolas, monospace; font-size: 0.8rem;
+                   white-space: pre-wrap; word-break: break-word; max-height: 150px;
+                   overflow-y: auto; color: #4b5563; border: 1px solid #e5e7eb; }
+  .footer { margin-top: 3rem; padding: 1rem 0; border-top: 1px solid #e5e7eb;
+            font-size: 0.8rem; color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<h1>ReasonMetrics Quality Report</h1>
+<p style="color:#6b7280">5000 traces analyzed</p>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="value">77.8</div>
+    <div class="label">Avg Quality Score</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">4733 <span style="font-size:0.9rem;color:#6b7280">(94.7%)</span></div>
+    <div class="label">High Quality (≥70)</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">13</div>
+    <div class="label">Language Mixed</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">3628</div>
+    <div class="label">No Self-Verification</div>
+  </div>
+</div>
+
+<h2>Score Distribution by Dimension</h2>
+<table>
+<tr><th>Dimension</th><th>Average</th><th style="width:40%">Distribution</th><th>% High (≥80)</th></tr>
+
+<tr>
+  <td>Efficiency</td>
+  <td>99.8/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.8%"></div></div></td>
+  <td>100.0%</td>
+</tr>
+
+<tr>
+  <td>Language Consistency</td>
+  <td>99.9/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.9%"></div></div></td>
+  <td>99.9%</td>
+</tr>
+
+<tr>
+  <td>Answer Alignment</td>
+  <td>41.4/100</td>
+  <td><div class="bar-bg"><div class="bar-fill bad" style="width:41.4%"></div></div></td>
+  <td>0.0%</td>
+</tr>
+
+<tr>
+  <td>Structural Clarity</td>
+  <td>70.2/100</td>
+  <td><div class="bar-bg"><div class="bar-fill okay" style="width:70.2%"></div></div></td>
+  <td>17.4%</td>
+</tr>
+
+<tr>
+  <td>Repetition</td>
+  <td>92.9/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:92.9%"></div></div></td>
+  <td>95.2%</td>
+</tr>
+
+<tr>
+  <td>Overthinking</td>
+  <td>85.0/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:85.0%"></div></div></td>
+  <td>68.3%</td>
+</tr>
+
+<tr>
+  <td>Self-Verification</td>
+  <td>41.5/100</td>
+  <td><div class="bar-bg"><div class="bar-fill bad" style="width:41.5%"></div></div></td>
+  <td>8.3%</td>
+</tr>
+
+<tr>
+  <td>Length Calibration</td>
+  <td>80.8/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:80.8%"></div></div></td>
+  <td>58.0%</td>
+</tr>
+
+</table>
+
+<h2>Top 10 Lowest Quality Traces</h2>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_4550</span>
+    <span class="score" style="color:#dc2626">59.5/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, I need to solve this programming problem. Let&#x27;s read the problem statement carefully and understand all the steps involved.
+
+The problem is about simulating the life cycle of a numoeba, which is a tree structure of cells. Each cell has a numbosome value, which changes every biological clock. The numoeba evolves through several steps each clock: updating numbosome values, handling cell deaths, adding bonus leaves, and changing the leader. The goal is to compute the lif...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_389</span>
+    <span class="score" style="color:#dc2626">61.7/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s tackle this problem. So, the task is to find the minimum number of arithmetic progressions (APs) that the given sequence can be divided into. The tricky part is that some elements are -1, which can be replaced by any positive integer. We need to determine how to assign those -1 values such that the total number of APs is minimized.
+
+Hmm. Let&#x27;s start by understanding the problem. Each AP must be a consecutive part of the sequence. So, the sequence is divided into...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_3749</span>
+    <span class="score" style="color:#dc2626">61.8/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>High repetition</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s tackle this problem. Hmm, the goal is to find the minimum total cost of breaking a chocolate bar of size n x m into exactly k squares. The cost of each break is the square of the break length. Oh right, each break splits a rectangle into two smaller ones, and we need to accumulate all the costs.
+
+First, I need to model this problem. The key is to find the optimal way to split the chocolate into k squares. But wait, the problem allows the remaining pieces not to ...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_2365</span>
+    <span class="score" style="color:#dc2626">62.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Language mixing detected</li><li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s tackle this problem. The task is to find the number of distinct geometric progressions of length n where each element is between l and r, inclusive, and all elements are distinct. Hmm, right. So a geometric progression (GP) is a sequence where each term after the first is found by multiplying the previous term by a common ratio d. And d can be any non-zero number, not necessarily integer. Also, two GPs are different if any corresponding elements differ. So even ...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_4410</span>
+    <span class="score" style="color:#dc2626">63.0/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s tackle this problem. So, we need to find the minimum number of steps a hexerpent can take to move its head to a given goal position, avoiding rocks and not colliding with itself. Hmm.
+
+First, let&#x27;s understand the movement rules. The hexerpent consists of connected sections. Each step, some sections can move, but adjacent ones can&#x27;t move at the same time. Also, after moving, the sections must remain connected and not form any new adjacent pairs that weren&#x27;t there...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_3506</span>
+    <span class="score" style="color:#dc2626">63.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s see. The problem is to find the minimum number of bracket replacements needed to make a given string a regular bracket sequence (RBS). If it&#x27;s not possible, output &quot;Impossible&quot;. Hmm.
+
+First, I need to understand what defines a regular bracket sequence here. From the description, the RBS is defined recursively. The empty string is RBS. If s1 and s2 are RBS, then enclosing s1 with a pair of matching brackets and followed by s2 is also RBS. So examples like &quot;()[]&quot; ...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_4497</span>
+    <span class="score" style="color:#dc2626">63.5/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, I need to solve this problem where I have to find the shortest path for a block to reach the goal. Let&#x27;s try to understand the problem step by step.
+
+First, the block is a 1x1xL rectangular prism. It can be in different orientations. The initial state is upright. The goal is to have it upright on G. The movement involves rotating in one of the four directions (N, S, E, W), and each move counts as one step. But the block can&#x27;t go through walls or be positioned over wal...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_3106</span>
+    <span class="score" style="color:#dc2626">63.7/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s try to figure out how to solve this problem. Hmm. The problem is about counting the number of ways to divide N people into groups under certain conditions. The conditions are a bit tricky. Let me break them down.
+
+First, every group must have between A and B people, inclusive. So, all groups are size in [A, B]. Then, for each possible group size i (like i= A, A+1, ..., B), the number of groups of size i, which they call F_i, must satisfy either F_i is zero or be...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_3865</span>
+    <span class="score" style="color:#dc2626">64.1/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, so I have this problem where I need to find a sequence of operations to sort a permutation. The operations are labeled from 1 to N-1. Each operation labeled k does a specific swap pattern: for each i starting at k, it swaps p[i] with p[i-k]. And I need to perform these operations in some order so that the permutation becomes sorted. The output is the list of operations used. Hmm.
+
+Let me start by understanding the operation. Let&#x27;s see. For a given k, when I apply oper...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: openthoughts_1518</span>
+    <span class="score" style="color:#dc2626">64.3/100</span>
+  </div>
+  <ul class="issues">
+    <li>Answer not at end of trace</li><li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+  </ul>
+  <div class="trace-preview">&lt;|begin_of_thought|&gt;
+
+Okay, let&#x27;s see. I need to solve this problem where I have to compute the maximum possible volume of a 3D object given its projections along three orthogonal axes. The input consists of three polygons (from front, right, top) which represent the X-ray images. The challenge is that the actual 3D shape must project to these polygons, and the volume must be as large as possible.
+
+First, I need to understand the problem thoroughly. The X-ray photos show the projections. For the...</div>
+</div>
+
+
+<div class="footer">
+  Generated by <strong>ReasonMetrics</strong> — Reasoning trace quality auditor
+</div>
+
+</body>
+</html>

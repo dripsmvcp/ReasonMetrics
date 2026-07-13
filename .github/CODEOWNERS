@@ -1,0 +1,12 @@
+# Review ownership. Solo-maintainer default: everything requires @dripsmvcp.
+# The explicit entries below mark maintainer-only zones (see CONTRIBUTING.md);
+# they stay in force even if the catch-all is later narrowed to delegate areas.
+
+* @dripsmvcp
+
+# Maintainer-only zones — scoring semantics, API contract, CI, release surface
+/crates/reasonmetrics-core/ @dripsmvcp
+/crates/reasonmetrics-wasm/src/ @dripsmvcp
+/.github/ @dripsmvcp
+/Cargo.toml @dripsmvcp
+/docs/launch.md @dripsmvcp

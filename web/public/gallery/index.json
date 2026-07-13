@@ -1,0 +1,32 @@
+[
+  {
+    "id": "r1-rambling",
+    "label": "R1 rambling",
+    "description": "deepseek-r1:1.5b grinding trial division on a yes/no question, never answering",
+    "file": "r1-rambling.json"
+  },
+  {
+    "id": "concise-qwen",
+    "label": "Concise Qwen",
+    "description": "qwen3:1.7b answering an easy question briefly and cleanly",
+    "file": "concise-qwen.json"
+  },
+  {
+    "id": "language-mixing",
+    "label": "Language mixing",
+    "description": "thinking flips between Chinese and English mid-trace",
+    "file": "language-mixing.json"
+  },
+  {
+    "id": "restart-loop",
+    "label": "Restart loop",
+    "description": "visible wait-and-reconsider loops on a trick question",
+    "file": "restart-loop.json"
+  },
+  {
+    "id": "verified-tidy",
+    "label": "Verified & tidy",
+    "description": "clean structure with explicit self-verification",
+    "file": "verified-tidy.json"
+  }
+]
