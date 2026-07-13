@@ -36,6 +36,11 @@ let readyPromise: Promise<void> | null = null;
 export function initWasm(): Promise<void> {
   if (!readyPromise) {
     readyPromise = loadWasm();
+    // A failed load must stay retryable: drop the cached promise on rejection
+    // so a later call attempts a fresh load instead of replaying the error.
+    readyPromise.catch(() => {
+      readyPromise = null;
+    });
   }
   return readyPromise;
 }

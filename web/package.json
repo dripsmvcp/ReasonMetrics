@@ -4,6 +4,7 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
+    "predev": "node -e \"require('fs').existsSync('src/pkg/reasonmetrics_wasm.js') || process.exit(1)\" || npm run build:wasm",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
