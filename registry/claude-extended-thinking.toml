@@ -1,0 +1,13 @@
+# Claude extended thinking — thinking arrives as dedicated content blocks in
+# the API; text exports commonly wrap it in <thinking> tags.
+
+id = "claude-extended-thinking"
+display_name = "Claude (extended thinking)"
+notes = "API returns thinking content blocks; flattened text exports usually use <thinking> tags. Thinking tokens are billed as output — see the provider pricing page (rates vary by model, so no static cost table)."
+
+fixture = "fixtures/claude-extended-thinking.json"
+
+[extraction]
+think_tags = [["<thinking>", "</thinking>"]]
+reasoning_fields = ["thinking"]
+

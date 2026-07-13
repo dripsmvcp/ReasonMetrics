@@ -55,6 +55,8 @@ enum Commands {
     },
     Explain,
     InitConfig,
+    /// List the model families in the embedded registry
+    Models,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -107,6 +109,7 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Explain => cmd_explain(),
         Commands::InitConfig => cmd_init_config(),
+        Commands::Models => cmd_models(),
     }
 
     Ok(())
@@ -264,6 +267,34 @@ COMPOSITE SCORE = weighted sum of all 9 dimensions (0-100).
 
 fn cmd_init_config() {
     print!("{}", Config::default_toml());
+}
+
+fn cmd_models() {
+    let entries = reasonmetrics_core::registry::entries();
+    println!("{} model families in the registry:\n", entries.len());
+    for e in entries {
+        println!("{}  — {}", e.id, e.display_name);
+        if !e.extraction.think_tags.is_empty() {
+            let tags: Vec<&str> = e
+                .extraction
+                .think_tags
+                .iter()
+                .map(|(start, _)| start.as_str())
+                .collect();
+            println!("  tags:   {}", tags.join(", "));
+        }
+        if !e.extraction.reasoning_fields.is_empty() {
+            println!("  fields: {}", e.extraction.reasoning_fields.join(", "));
+        }
+        if let Some(c) = &e.cost {
+            println!(
+                "  cost:   ${}/M in, ${}/M out  ({})",
+                c.input_per_mtok, c.output_per_mtok, c.source
+            );
+        }
+        println!();
+    }
+    println!("Add a model family: one TOML + one fixture — see CONTRIBUTING.md.");
 }
 
 fn print_summary(scored: &[ScoredTrace]) {

@@ -1,0 +1,7 @@
+{
+  "description": "flattened text export with thinking tags",
+  "input": "<thinking>The request is a unit conversion. 5 km in miles: 5 × 0.621 = 3.105. Let me verify: 3.105 / 0.621 = 5. ✓</thinking>5 km is about 3.1 miles.",
+  "expected_thinking": "The request is a unit conversion. 5 km in miles: 5 × 0.621 = 3.105. Let me verify: 3.105 / 0.621 = 5. ✓",
+  "input_json": { "thinking": "5 × 0.621 = 3.105 miles.", "content": "About 3.1 miles." },
+  "expected_field_thinking": "5 × 0.621 = 3.105 miles."
+}

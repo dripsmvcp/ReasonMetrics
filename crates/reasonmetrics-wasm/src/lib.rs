@@ -51,6 +51,18 @@ pub fn analyze(trace_json: &str) -> Result<String, JsError> {
     analyze_impl(trace_json).map_err(|e| JsError::new(&e))
 }
 
+/// Pure implementation, testable on any target.
+pub fn registry_json_impl() -> String {
+    serde_json::to_string(reasonmetrics_core::registry::entries()).unwrap_or_else(|_| "[]".into())
+}
+
+/// The embedded model-family registry (extraction formats, costs, lexicons)
+/// as a JSON array — lets the web app share one source of truth with the CLI.
+#[wasm_bindgen]
+pub fn registry_json() -> String {
+    registry_json_impl()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,5 +102,16 @@ mod tests {
     fn accepts_field_aliases() {
         let json = r#"{"id":7,"question":"Q","reasoning":"R is the reasoning.","solution":"A"}"#;
         assert!(analyze_impl(json).is_ok());
+    }
+
+    #[test]
+    fn registry_json_is_a_populated_array() {
+        let parsed: serde_json::Value = serde_json::from_str(&registry_json_impl()).unwrap();
+        let entries = parsed.as_array().expect("registry_json is an array");
+        assert!(!entries.is_empty(), "registry should ship seed entries");
+        for entry in entries {
+            assert!(entry["id"].is_string());
+            assert!(entry["display_name"].is_string());
+        }
     }
 }

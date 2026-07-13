@@ -1,0 +1,7 @@
+{
+  "description": "harmony analysis channel",
+  "input": "<|channel|>analysis<|message|>User wants the capital of France. That is Paris — no verification needed.<|end|><|start|>assistant<|channel|>final<|message|>Paris.",
+  "expected_thinking": "User wants the capital of France. That is Paris — no verification needed.",
+  "input_json": { "reasoning": "Capital of France is Paris.", "content": "Paris." },
+  "expected_field_thinking": "Capital of France is Paris."
+}

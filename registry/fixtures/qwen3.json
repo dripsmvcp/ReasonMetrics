@@ -1,0 +1,7 @@
+{
+  "description": "Qwen3 thinking-mode block",
+  "input": "<think>Simple arithmetic. 17 + 26: tens first, 10 + 20 = 30, then 7 + 6 = 13, so 43.</think>17 + 26 = 43.",
+  "expected_thinking": "Simple arithmetic. 17 + 26: tens first, 10 + 20 = 30, then 7 + 6 = 13, so 43.",
+  "input_json": { "reasoning_content": "Tens first, 30 + 13 = 43.", "content": "43" },
+  "expected_field_thinking": "Tens first, 30 + 13 = 43."
+}

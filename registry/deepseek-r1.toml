@@ -1,0 +1,33 @@
+# DeepSeek-R1 family — R1, R1-Zero, and the distilled variants.
+# Reference entry: this file is the worked example in CONTRIBUTING.md.
+
+id = "deepseek-r1"
+display_name = "DeepSeek-R1 family"
+notes = "Emits <think> blocks inline; API exposes reasoning_content separately."
+
+fixture = "fixtures/deepseek-r1.json"
+
+[extraction]
+# Ordered [start, end] tag pairs tried against raw text.
+think_tags = [["<think>", "</think>"]]
+# Top-level JSON fields that hold the reasoning when input is structured.
+reasoning_fields = ["reasoning_content"]
+
+[cost]
+# USD per 1M tokens. Always cite a source + date; omit the table if pricing
+# is host-dependent (open-weight models).
+input_per_mtok = 0.55
+output_per_mtok = 2.19
+source = "api-docs.deepseek.com pricing, checked 2026-07"
+
+[heuristics]
+# Rough tokens-per-character for the cost meter (≈4 chars/token English).
+tokens_per_char = 0.25
+
+# Lexicon additions (restart/verification phrases, per language) land here.
+# NOTE: lexicons are DATA-ONLY until the calibration study wires them into
+# the scorers — see the tracking issue before changing scorer behavior.
+# [lexicon.zh]
+# restart = ["等等", "让我重新考虑"]
+# verification = ["验证一下"]
+

@@ -1,0 +1,12 @@
+# Qwen3 family — hybrid thinking models (/think and /no_think modes).
+
+id = "qwen3"
+display_name = "Qwen3 family"
+notes = "Open-weight; emits <think> blocks in thinking mode. Pricing is host-dependent, so no cost table."
+
+fixture = "fixtures/qwen3.json"
+
+[extraction]
+think_tags = [["<think>", "</think>"]]
+reasoning_fields = ["reasoning_content"]
+

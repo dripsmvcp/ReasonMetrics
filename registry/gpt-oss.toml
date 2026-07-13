@@ -1,0 +1,13 @@
+# gpt-oss family — OpenAI open-weight models using the harmony response format.
+# Reasoning lives in the `analysis` channel of the raw output.
+
+id = "gpt-oss"
+display_name = "gpt-oss family (harmony format)"
+notes = "Raw harmony output routes reasoning through the analysis channel; chat wrappers may surface it as a reasoning field instead."
+
+fixture = "fixtures/gpt-oss.json"
+
+[extraction]
+think_tags = [["<|channel|>analysis<|message|>", "<|end|>"]]
+reasoning_fields = ["reasoning", "analysis"]
+

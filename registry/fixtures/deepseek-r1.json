@@ -1,0 +1,7 @@
+{
+  "description": "R1-style inline think block",
+  "input": "<think>The user asks 2+2. That is 4. Wait, let me double-check: 4 - 2 = 2, so 2 + 2 = 4.</think>The answer is 4.",
+  "expected_thinking": "The user asks 2+2. That is 4. Wait, let me double-check: 4 - 2 = 2, so 2 + 2 = 4.",
+  "input_json": { "reasoning_content": "The user asks 2+2. That is 4.", "content": "The answer is 4." },
+  "expected_field_thinking": "The user asks 2+2. That is 4."
+}
