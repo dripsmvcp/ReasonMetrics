@@ -49,7 +49,7 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: npm install -g wasm-pack@0.13.1
       - name: Node tests under wasm
         run: wasm-pack test --node crates/reasonmetrics-wasm
       - name: Build web package
@@ -70,7 +70,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: npm install -g wasm-pack@0.13.1
       - name: Install web dependencies
         run: npm ci
         working-directory: web

@@ -29,18 +29,21 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: npm install -g wasm-pack@0.13.1
       - name: Install web dependencies
         run: npm ci
         working-directory: web
-      - name: Build wasm package
-        run: npm run build:wasm
+      - name: Test gate (rust)
+        run: cargo test --workspace
+      - name: Test gate (web, pretest builds the wasm pkg)
+        run: npm test
         working-directory: web
       - name: Build web bundle
         run: npm run build
         working-directory: web
         env:
-          BASE_PATH: /reasonmetrics/
+          # Must match the Pages URL exactly — the repo name is case-sensitive
+          BASE_PATH: /ReasonMetrics/
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
