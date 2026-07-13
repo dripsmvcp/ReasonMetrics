@@ -224,11 +224,11 @@ CI runs formatting, clippy, tests, the wasm32 check, and a wasm-pack build on ev
 
 ## Contribute & Earn — via Gittensor
 
-This repository is listed on [Gittensor](https://gittensor.io), a Bittensor subnet that pays contributors in TAO for merged pull requests.
+We're bringing ReasonMetrics to [Gittensor](https://gittensor.io), a Bittensor subnet that pays contributors in TAO for merged pull requests — once the listing is live, every merged contribution here earns.
 
 This isn't ordinary open contribution — it moves surprisingly fast. Gittensor supplies a standing pool of contributors with a direct incentive to ship mergeable work, and ReasonMetrics is built to absorb them: model support, language lexicons, and dataset converters are independent data-plus-fixture PRs that CI verifies mechanically and that merge within a 48-hour review SLA. Rewarded contributors → quick objective merges → broader coverage → more contributors. And every new reasoning-model release creates fresh, well-defined work, so the pipeline never runs dry.
 
-**Getting started:** pick a `good-first-issue`, follow [CONTRIBUTING.md](CONTRIBUTING.md), open your PR — merged PRs earn through Gittensor automatically.
+**Getting started:** pick a `good first issue`, follow [CONTRIBUTING.md](CONTRIBUTING.md), open your PR — and once the listing is live, merged PRs earn through Gittensor automatically.
 
 ---
 
