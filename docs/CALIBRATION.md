@@ -85,35 +85,63 @@ is undefined.
 - **The composite tracks the judge within every corpus** (+0.09 / +0.31 /
   +0.53), strongest exactly where traces are long R1-style reasoning, which
   is the tool's target input.
-- **`structural_score` is miscalibrated — and we now know why: it is a length
-  proxy.** Measured on all 2,517 scored traces, with no judge involved,
-  `structural_score` correlates **ρ = +0.50 with trace word count** (+0.64 on
-  the judged subset). The judge moves the other way: **ρ = −0.53** between word
-  count and `logical_validity`. That single fact accounts for the whole
-  anti-correlation. It also means the dimension carries no independent signal —
-  length is already captured, and captured *better*, by `length_score` (+0.38)
-  and `overthinking_score` (+0.31), which correlate positively *because* they
-  penalise length.
-
-  Three candidate fixes were tried and refuted by measurement: dropping the
-  backtracking tics from its marker list (a real defect — `efficiency.rs`
-  counts the same `"wait,"` / `"hmm,"` / `"actually,"` phrases as *restarts* and
-  penalises them, so the same tic is both punished and rewarded — but it moved ρ
-  only from −0.44 to −0.43); score saturation (rejected: `length_score` is at its
-  ceiling 55% of the time and still correlates +0.38); and normalising the
-  paragraph term by length (+0.50 → +0.49). The confound is what the metric
-  measures, not a bug in one term.
-
-  Dropping it from the composite entirely lifts the mean per-dataset ρ from
-  +0.31 to +0.36 — **suggestive, not decisive**: at n=20 per dataset the standard
-  error on a Spearman is ≈0.24, so that difference sits inside the noise, and no
-  weight was changed on the strength of it. Tracking in
-  [#13](https://github.com/dripsmvcp/ReasonMetrics/issues/13). Until it is
-  reworked or dropped, treat this dimension as a description of formatting, not
-  of quality.
+- **`structural_score` scores badly against this judge** (−0.05 limo / +0.05 s1k
+  / −0.40 medical). We tried to explain that away as a length confound and
+  **published the wrong explanation** — see the retraction below. Against ground
+  truth it is one of the *better* dimensions. Treat the judge result here as
+  weak evidence, not as a verdict; tracking in
+  [#13](https://github.com/dripsmvcp/ReasonMetrics/issues/13).
 - **The judge itself is a blunt instrument**: it graded 95% of traces ≥80
   and its four dimensions intercorrelate +0.36..+0.70 (halo effect). Judge
   leniency compresses ranks and attenuates every ρ above.
+
+## Ground truth beats the judge (n=938)
+
+The study above rests on 60 traces graded by a lenient 7B model. We replaced that
+with an **objective** label: s1K-1.1 ships, per problem, R1's real reasoning trace,
+R1's final answer, *and* the human ground-truth solution. Comparing the two answers
+with symbolic verification (`math_verify`) labels **938 traces correct/incorrect**
+with no LLM in the loop — a 15× larger, judge-free evidence base, balanced 48/52.
+
+AUC = P(a correct trace outranks an incorrect one). 0.50 is a coin flip.
+
+| dimension | AUC vs. answer-correctness |
+|---|---|
+| **quality_score (composite)** | **0.714** |
+| structural_score | 0.685 |
+| length_score | 0.680 |
+| overthinking_score | 0.648 |
+| verification_score | 0.623 |
+| repetition_score | 0.551 |
+| language_score | 0.492 |
+| efficiency_score | 0.470 |
+| answer_alignment_score | 0.469 |
+| *(trace length alone, shorter=better)* | *0.710* |
+
+**The composite really does predict whether reasoning reaches the right answer**
+(0.714) — the strongest evidence this project has. Three caveats, stated plainly:
+
+1. **`structural_score` is one of the better dimensions here (0.685)**, flatly
+   contradicting the judge study. See the retraction below.
+2. **Length alone scores 0.710** — nearly the whole composite. On this corpus most
+   of our signal *is* "shorter is better". Nine dimensions are not yet earning
+   their keep over one heuristic.
+3. **The default filter is useless.** `filter --min-score 70` keeps **99.9%** of
+   real R1 traces (937 of 938). The ranking works; the *threshold* does not
+   discriminate, because scores are crushed into the top of the range. That, not
+   any single dimension, is why a rambling trace shows 82.9 in green. Percentile
+   filtering (top-N%) works today; the absolute scale needs recalibrating.
+
+### Retraction (2026-07-15)
+
+An earlier version of this document claimed `structural_score` "is a length proxy",
+citing ρ = +0.50 between it and word count across all 2,517 traces. **That was
+wrong, and it was wrong in the specific way this document warns about two sections
+above: it was a Simpson artifact.** Pooled it is +0.50; *within* each corpus it is
+**−0.21 (limo), −0.19 (s1k), +0.09 (medical)** — the correlation exists in no
+dataset and was manufactured entirely by mixing corpora of different lengths.
+Three "fixes" derived from that false mechanism were tried and refuted by
+measurement; none shipped. The claim is withdrawn.
 
 ## How to read this honestly
 
