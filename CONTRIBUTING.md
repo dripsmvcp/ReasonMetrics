@@ -80,3 +80,5 @@ CI runs these plus a wasm-pack build on every PR. Run the ones covering your cha
 
 Target first response and merge decision within **48 hours**. If a PR sits longer, ping it — that's
 a miss on our side, not yours.
+
+<!-- path-guard verification: green-zone edit, safe to close unmerged -->
