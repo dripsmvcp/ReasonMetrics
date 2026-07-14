@@ -125,12 +125,126 @@ AUC = P(a correct trace outranks an incorrect one). 0.50 is a coin flip.
    contradicting the judge study. See the retraction below.
 2. **Length alone scores 0.710** — nearly the whole composite. On this corpus most
    of our signal *is* "shorter is better". Nine dimensions are not yet earning
-   their keep over one heuristic.
-3. **The default filter is useless.** `filter --min-score 70` keeps **99.9%** of
-   real R1 traces (937 of 938). The ranking works; the *threshold* does not
-   discriminate, because scores are crushed into the top of the range. That, not
-   any single dimension, is why a rambling trace shows 82.9 in green. Percentile
-   filtering (top-N%) works today; the absolute scale needs recalibrating.
+   their keep over one heuristic. *(This turns out to be a DeepSeek-specific
+   artifact — see "Does it survive a second model?" below.)*
+3. **The default filter was useless.** `filter --min-score 70` kept **99.9%** of
+   real R1 traces (937 of 938). The ranking worked; the *threshold* did not
+   discriminate, because scores were crushed into the top of the range. That, not
+   any single dimension, is why a rambling trace showed 82.9 in green.
+   **Fixed in [#30](https://github.com/dripsmvcp/ReasonMetrics/issues/30)** — see
+   "The calibrated scale" below.
+
+## Is the filter just picking easy problems? (n=938, 2 models)
+
+An AUC of 0.714 against answer-correctness has an ugly alternative explanation:
+**hard problem → long, messy trace → wrong answer.** If so, the scorer would be
+an elaborate difficulty detector, and filtering by it would quietly strip the hard
+problems out of a training set — the opposite of curation.
+
+That worry is well-founded on its face: filtering *does* select easier problems.
+Tighten to the top 30% and problems both models got wrong fall from 46.8% → 32.6%,
+while problems both got right rise from 39.4% → 57.1%.
+
+To separate the two effects, hold the **model** constant (score only DeepSeek's
+traces) and split problems by an **independent** difficulty proxy — did *Gemini*
+get the same problem right? Gemini's correctness says nothing about the DeepSeek
+trace being scored, so it cannot leak. The difficulty effect it exposes is huge:
+DeepSeek is 88.3% correct on the easy stratum and 15.4% on the hard one.
+
+| dimension | pooled | easy-only | hard-only |
+|---|---|---|---|
+| **quality_score** | **0.713** | **0.701** | **0.632** |
+| verification_score | 0.623 | 0.600 | 0.596 |
+| structural_score | 0.688 | 0.665 | 0.607 |
+| length_score | 0.680 | 0.693 | 0.541 *(n.s.)* |
+| *(length alone, shorter=better)* | 0.710 | 0.702 | 0.590 |
+
+**The composite survives inside both strata** (0.632–0.701). It is not merely a
+difficulty detector: given two traces on problems of comparable difficulty, it
+still ranks the one that reaches the right answer higher. This is the result that
+justifies filtering at all.
+
+## Does it survive a second model? (n=940)
+
+s1K ships a Gemini trace for every problem too, so the whole study re-runs on a
+different model answering the *same questions*. This is where the composite's
+story gets less flattering.
+
+| dimension | DeepSeek AUC | Gemini AUC |
+|---|---|---|
+| quality_score | 0.713 | 0.574 |
+| **verification_score** | **0.623** | **0.662** |
+| structural_score | 0.688 | 0.468 *(n.s.)* |
+| length_score | 0.680 | 0.525 |
+| *(length alone, shorter=better)* | 0.710 | **0.540** |
+
+- **The length signal does not transfer.** "Shorter is better" scores 0.710 on
+  DeepSeek and **0.540** on Gemini — on the same problems. Caveat 2 above is
+  therefore a statement about DeepSeek's verbosity, *not* a general fact about
+  reasoning traces, and the earlier phrasing ("most of our signal is shorter is
+  better") overclaims. DeepSeek's traces are 4,658 words at the median; Gemini's
+  are 1,980.
+- **`verification_score` is the only dimension that holds up everywhere** —
+  positive and significant on both models and in both difficulty strata
+  (0.596–0.680 throughout). It is the most transferable thing the scorer has.
+- **`structural_score` does not replicate** (0.688 → 0.468, and *below* chance on
+  Gemini's easy stratum). [#13](https://github.com/dripsmvcp/ReasonMetrics/issues/13)
+  stays open.
+
+Reweighting the composite on this evidence is tempting and **has not been done**:
+every corpus here is math, so new weights would be fitted to one domain. Tracked
+separately rather than shipped on thin evidence.
+
+### A confound we caught in our own work
+
+The first attempt at the difficulty control used a **paired** design — same
+problem, DeepSeek trace vs Gemini trace — and produced a dramatic result: length
+"inverted", with the shorter trace *less* likely to be correct (39.5%, p=0.02).
+
+**It was wrong.** Splitting the pairs by which model happened to be right showed
+every signal flipping sign completely (`quality_score` won 88.8% of the pairs
+DeepSeek got right, and 20.4% of the ones Gemini got right). Pairing holds the
+*problem* constant but not the *model* — and since DeepSeek's traces are ~2.4×
+longer and score ~7 points higher, the test was really measuring "the scorer
+prefers DeepSeek, and DeepSeek is more often right." The finding was discarded
+before it reached this page.
+
+That is the third confound-driven false result in this project's calibration work
+(after the pooled Simpson artifact and the retracted length-proxy claim). The
+lesson is now a rule: **stratify before believing.**
+
+## The calibrated scale
+
+`quality_score` is no longer the raw weighted average of the dimensions. It is
+that composite's **percentile against a reference distribution of 2,517 real
+reasoning traces** (limo + s1K + medical) — "better than N% of real traces". The
+raw composite is still reported, as `raw_score`.
+
+The mapping is monotone, so **ranking is completely unchanged** — every AUC on
+this page is identical before and after. Only the scale moved. What that buys:
+
+| | before | after |
+|---|---|---|
+| `--min-score 70` keeps | 937/938 (99.9%) | **197/938 (21.0%)** |
+| accuracy of kept traces | 48.0% (= unfiltered) | **69.0%** |
+| accuracy of dropped traces | — | 42.4% |
+| adversarial fixtures surviving | 5 of 7 | **0 of 7** |
+| `r1-rambling` (never answers) | 82.9, green | **40.4, red** |
+
+Two honest consequences:
+
+- **The scale is corpus-relative.** The reference corpus is math-heavy (1,817 of
+  2,517 traces) and long (median 2,578 words). A very short trace scores near
+  zero — a "what is 2+2" trace lands at ~1 — which is *correct* (it contains
+  almost no reasoning, and is near-worthless as reasoning training data) but will
+  surprise you if you read the number as a grade. It is a percentile, not a grade.
+- **Scores are not comparable across scorer versions** unless the curve is held
+  fixed. Refitting it (`scripts/fit_calibration.py`) is a semver-relevant event,
+  and the curve is fitted against the *default weights* — changing the weights
+  without refitting makes the percentiles lie.
+
+For size-exact curation, `filter --top-percent N` keeps the best N% of the input
+file regardless of the reference distribution.
 
 ### Retraction (2026-07-15)
 
@@ -161,8 +275,34 @@ measurement; none shipped. The claim is withdrawn.
 
 ## Reproduce
 
+The ground-truth study (n=938), the difficulty stratification, and the
+cross-model replication — no LLM judge, no API key:
+
 ```bash
-# convert your traces to {"id", "problem", "thinking", "answer"} JSONL, then:
+pip install datasets math-verify
+
+# Objective correct/incorrect labels by symbolic answer verification.
+# --models deepseek,gemini gives two traces per problem, which is what the
+# difficulty control and the second-model replication need.
+python scripts/build_correctness_labels.py --models deepseek,gemini -o paired.jsonl
+
+reasonmetrics score -i paired.jsonl -o paired_scored.jsonl
+python scripts/filter_study.py paired_scored.jsonl --labels paired.jsonl --paired
+```
+
+`filter_study.py` reports the retention sweep, the random-drop null, the
+length-alone control, per-dimension AUCs with bootstrap CIs, and the paired test.
+
+Refit the calibration curve (maintainer action — see the caveats above):
+
+```bash
+python scripts/fit_calibration.py limo_scored.jsonl s1k_scored.jsonl \
+    medical_scored.jsonl > crates/reasonmetrics-core/src/calibration/table.rs
+```
+
+The original LLM-judge study:
+
+```bash
 reasonmetrics score -i traces.jsonl -o scored.jsonl
 
 python scripts/llm_judge.py traces.jsonl --provider ollama \

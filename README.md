@@ -89,12 +89,25 @@ reasonmetrics --help                           # sanity check
 
 ```bash
 reasonmetrics score  -i traces.jsonl -o scored.parquet   # score all traces
-reasonmetrics filter -i traces.jsonl -o clean.jsonl --min-score 70
+reasonmetrics filter -i traces.jsonl -o clean.jsonl --min-score 70    # keep traces better than 70% of real ones
+reasonmetrics filter -i traces.jsonl -o clean.jsonl --top-percent 30  # keep the best 30% of THIS file
 reasonmetrics report -i traces.jsonl -o report.html      # generate HTML report
 reasonmetrics stats  -i traces.jsonl                     # summary statistics
 reasonmetrics explain                                    # score dimension reference
 reasonmetrics init-config > my-scoring.toml              # dump default weights/thresholds
 ```
+
+**`quality_score` is a percentile, not a grade.** It says "this trace out-reasons N% of
+real reasoning traces", measured against a reference corpus of 2,517 of them. So
+`--min-score 70` keeps the top ~30%, and a trivially short trace scoring 3 is the tool
+working, not failing. `--top-percent` instead keeps an exact share of your own file,
+for when the output size has to be fixed. The underlying weighted average of the nine
+dimensions is still reported as `raw_score`.
+
+On 938 traces with objective correct/incorrect labels, `--min-score 70` keeps traces
+that reach the right answer **69.0%** of the time, versus **42.4%** for the ones it
+drops (unfiltered baseline: 48.0%). Details, controls, and the ways this can mislead
+you: [docs/CALIBRATION.md](docs/CALIBRATION.md).
 
 Every command takes `--config <file>` (default: `reasonmetrics.toml` in the current directory — the repo root ships a ready-made one). To customize scoring, edit that file in place or pass a generated one: `reasonmetrics score --config my-scoring.toml -i traces.jsonl`. (Careful: `init-config > reasonmetrics.toml` at the repo root overwrites the tracked file.)
 
@@ -114,11 +127,12 @@ pip install "git+https://github.com/dripsmvcp/ReasonMetrics.git#subdirectory=cra
 import reasonmetrics as rm
 
 result = rm.score({"problem": "2+2?", "thinking": "<think>4. Let me verify: 2+2=4.</think>", "answer": "4", "id": "1"})
-result["scored"]["quality_score"]        # composite 0-100
+result["scored"]["quality_score"]        # percentile vs real traces (0-100)
+result["scored"]["raw_score"]            # the weighted dimension average behind it
 result["annotations"]                    # restart/verification/repetition spans
 
 scored = rm.score_many(records)          # parallel batch, list of the same dicts
-kept = [r for r in scored if r["scored"]["quality_score"] >= 70]
+kept = [r for r in scored if r["scored"]["quality_score"] >= 70]   # top ~30%
 
 rm.score(record, config={"weights": {"efficiency": 0.5}})   # reasonmetrics.toml-shaped overrides
 rm.registry()                            # embedded model-family registry
@@ -150,7 +164,19 @@ Accepts aliases: `question`/`prompt`/`query`/`input` for problem; `reasoning`/`c
 
 Scores are heuristics — a lens, not ground truth. The failure modes are documented and pinned by adversarial tests: see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-Measured against an LLM judge on 60 stratified traces: the composite tracks judged quality within every corpus (Spearman ρ up to **+0.53** on long R1-style traces; self-verification is the most consistent signal at ρ ≈ +0.4 across all three), while one dimension came back miscalibrated — we say which, and opened an issue. Tables, method, and caveats: [docs/CALIBRATION.md](docs/CALIBRATION.md).
+**Does the score predict anything real?** Measured against **938 traces with objective
+correct/incorrect labels** (s1K-1.1, symbolic answer verification, no LLM in the loop): the
+composite reaches **AUC 0.714** at predicting whether a trace arrives at the right answer, and
+it holds up when you control for problem difficulty (0.632 on hard problems, 0.701 on easy) —
+so it is not just an elaborate difficulty detector. `--min-score 70` keeps traces that are right
+**69.0%** of the time vs **42.4%** for those it drops.
+
+Two things we are *not* claiming. On a second model answering the same problems, the composite
+weakens (AUC 0.574) and the "shorter is better" signal that carries much of it on DeepSeek
+largely evaporates (0.710 → 0.540) — only `verification_score` transfers cleanly. And structural
+scores say nothing about whether the reasoning is *sound*; a confident, tidy, wrong trace scores
+well by design. Full tables, the controls, a confound we caught in our own analysis, and the
+failure modes: [docs/CALIBRATION.md](docs/CALIBRATION.md).
 
 ## Validated Datasets
 
