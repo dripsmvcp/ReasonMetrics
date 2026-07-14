@@ -24,6 +24,41 @@ const STORAGE_MODEL_B = "reasonmetrics.ollama.modelB";
 const DEFAULT_BASE_URL = "http://localhost:11434";
 const THROTTLE_MS = 500;
 
+/** How long a compare side may go without producing a single byte before we
+ * give up on it. A cold model on CPU can legitimately take tens of seconds to
+ * load before its first token, so this is generous; it exists to bound the
+ * case where Ollama can never serve the model at all (it silently queues the
+ * request behind one it cannot co-load, and `fetch` itself never times out),
+ * which otherwise leaves the run hanging forever. */
+export const COMPARE_STALL_MS = 90_000;
+
+/** Per-side lifecycle of a compare run. Each side owns its own status so a
+ * model that has finished reports done immediately instead of being masked by
+ * the other side still running. */
+type SideStatus = "idle" | "waiting" | "streaming" | "done" | "stalled" | "stopped" | "error";
+
+const STATUS_LABEL: Record<SideStatus, string> = {
+  idle: "—",
+  waiting: "waiting for its turn…",
+  streaming: "streaming…",
+  done: "done",
+  stalled: "no response — gave up",
+  stopped: "stopped",
+  error: "failed",
+};
+
+/** An AbortController that also aborts when `parent` does. Lets a single
+ * stalled side abort itself without tearing down the whole compare run. */
+function linkedController(parent: AbortSignal): AbortController {
+  const child = new AbortController();
+  if (parent.aborted) {
+    child.abort();
+  } else {
+    parent.addEventListener("abort", () => child.abort(), { once: true });
+  }
+  return child;
+}
+
 interface LivePanelProps {
   onAnalyze: (record: TraceInput) => void;
   /** True while the Live tab is the active mode. Drives the one-time
@@ -49,6 +84,8 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
   const [modelB, setModelB] = useState("");
   const [resultA, setResultA] = useState<AnalysisResult | null>(null);
   const [resultB, setResultB] = useState<AnalysisResult | null>(null);
+  const [statusA, setStatusA] = useState<SideStatus>("idle");
+  const [statusB, setStatusB] = useState<SideStatus>("idle");
 
   // Mutable refs, not state: Stop must see and cancel the in-flight
   // controller/throttle synchronously, in the same tick as the click — an
@@ -164,14 +201,25 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
   /** One compare side: stream a model, re-scoring the partial trace through
    * the same wasm analyzeTrace the main pipeline uses, into that side's
    * result slot. Mid-stream analysis failures are ignored (the last good
-   * tick stays on screen, matching the single-model keep-last semantics). */
+   * tick stays on screen, matching the single-model keep-last semantics).
+   *
+   * The side runs on its own controller, linked to the run's: a side that
+   * goes COMPARE_STALL_MS without a byte aborts itself and reports `stalled`,
+   * leaving the rest of the run — and the other model — intact. */
   async function streamCompareSide(
     model: string,
     currentPrompt: string,
-    controller: AbortController,
+    runSignal: AbortSignal,
     setResult: (result: AnalysisResult) => void,
     recordRef: { current: TraceInput | null },
+    setStatus: (status: SideStatus) => void,
   ): Promise<void> {
+    if (runSignal.aborted) {
+      setStatus("stopped");
+      return;
+    }
+
+    const controller = linkedController(runSignal);
     const analyze = (rec: TraceInput) => {
       recordRef.current = rec;
       try {
@@ -183,23 +231,55 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
     const analyzeThrottled = throttle(analyze, THROTTLE_MS);
     activeThrottlesRef.current.push(analyzeThrottled);
 
+    let stalled = false;
+    let stallTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearStall = () => {
+      if (stallTimer !== null) {
+        clearTimeout(stallTimer);
+        stallTimer = null;
+      }
+    };
+    // Re-armed on every byte, so this bounds silence rather than total
+    // runtime: a slow-but-alive model streams for as long as it needs.
+    const armStall = () => {
+      clearStall();
+      stallTimer = setTimeout(() => {
+        stalled = true;
+        controller.abort();
+      }, COMPARE_STALL_MS);
+    };
+
+    setStatus("streaming");
+    armStall();
+
     try {
       await streamChat({
         baseUrl: baseUrlRef.current,
         model,
         prompt: currentPrompt,
         signal: controller.signal,
-        onDelta: (delta) => analyzeThrottled(toTraceInput(currentPrompt, delta)),
+        onDelta: (delta) => {
+          armStall();
+          analyzeThrottled(toTraceInput(currentPrompt, delta));
+        },
         onDone: (final) => {
+          clearStall();
           analyzeThrottled.cancel();
           analyze(toTraceInput(currentPrompt, final));
+          setStatus("done");
         },
       });
     } catch (err) {
-      if (!isAbortError(err)) {
+      if (stalled) {
+        setStatus("stalled");
+      } else if (isAbortError(err)) {
+        setStatus("stopped");
+      } else {
+        setStatus("error");
         showConnectionError(err);
       }
     } finally {
+      clearStall();
       analyzeThrottled.cancel();
     }
   }
@@ -210,21 +290,40 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
     if (selectedModelRef.current) writeStorage(STORAGE_MODEL, selectedModelRef.current);
     if (modelBRef.current) writeStorage(STORAGE_MODEL_B, modelBRef.current);
 
-    const controller = new AbortController();
-    controllerRef.current = controller;
+    const run = new AbortController();
+    controllerRef.current = run;
     setStreaming(true);
     setResultA(null);
     setResultB(null);
     recordARef.current = null;
     recordBRef.current = null;
     activeThrottlesRef.current = [];
+    setStatusA("waiting");
+    setStatusB("waiting");
     const currentPrompt = prompt;
 
     try {
-      await Promise.all([
-        streamCompareSide(selectedModelRef.current, currentPrompt, controller, setResultA, recordARef),
-        streamCompareSide(modelBRef.current, currentPrompt, controller, setResultB, recordBRef),
-      ]);
+      // Sequential, not Promise.all: a single Ollama host can rarely hold two
+      // models at once, so racing them makes it queue one behind the other —
+      // the starved side then produces no bytes at all (and `fetch` never
+      // times out), which used to hang the whole run. One at a time is both
+      // faster in practice and always shows progress.
+      await streamCompareSide(
+        selectedModelRef.current,
+        currentPrompt,
+        run.signal,
+        setResultA,
+        recordARef,
+        setStatusA,
+      );
+      await streamCompareSide(
+        modelBRef.current,
+        currentPrompt,
+        run.signal,
+        setResultB,
+        recordBRef,
+        setStatusB,
+      );
     } finally {
       activeThrottlesRef.current = [];
       controllerRef.current = null;
@@ -323,8 +422,14 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
         {error ?? ""}
       </p>
 
-      {compareMode && (resultA || resultB) && (
+      {compareMode && (streaming || resultA || resultB) && (
         <div className="live-compare">
+          <div className="live-compare-status">
+            <span className="live-status-a">
+              {`${selectedModel || "A"}: ${STATUS_LABEL[statusA]}`}
+            </span>
+            <span className="live-status-b">{`${modelB || "B"}: ${STATUS_LABEL[statusB]}`}</span>
+          </div>
           <CompareScores labelA={selectedModel} labelB={modelB} a={resultA} b={resultB} />
           <div className="live-compare-actions">
             <button

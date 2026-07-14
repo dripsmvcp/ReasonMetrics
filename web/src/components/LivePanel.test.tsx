@@ -12,7 +12,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OllamaHttpError } from "../lib/ollama";
 import type { TraceInput } from "../lib/types";
-import { LivePanel } from "./LivePanel";
+import { COMPARE_STALL_MS, LivePanel } from "./LivePanel";
 
 vi.mock("../lib/ollama", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/ollama")>();
@@ -441,9 +441,9 @@ describe("LivePanel: compare mode", () => {
 
     fireEvent.change(promptBox, { target: { value: "2+2?" } });
     fireEvent.click(startButton);
-    await vi.waitFor(() =>
-      expect(container.querySelector(".compare-scores")).not.toBeNull(),
-    );
+    // The table renders as soon as the run starts, so wait for B's own turn to
+    // finish — its "Open in detail" button stays disabled until it has a result.
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
 
     fireEvent.click(container.querySelector<HTMLButtonElement>("button.live-open-b")!);
     expect(onAnalyze).toHaveBeenCalledTimes(1);
@@ -454,11 +454,131 @@ describe("LivePanel: compare mode", () => {
     });
   });
 
-  it("Stop aborts both streams", async () => {
+  it("streams the two models one at a time, never concurrently", async () => {
+    // A single local Ollama can rarely hold two models at once: racing them
+    // starves one side, which produces no bytes at all until the other is
+    // done. Compare mode must therefore serialize the two runs.
+    const started: string[] = [];
+    const finishers: (() => void)[] = [];
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((resolve) => {
+          started.push(opts.model);
+          finishers.push(() => {
+            opts.onDone({ thinking: `thoughts:${opts.model}`, content: "ans" });
+            resolve();
+          });
+        }),
+    );
+
+    const { container, activate, promptBox, modelSelect, startButton } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    fireEvent.click(startButton);
+
+    // Only model A is in flight; B must not have been requested yet.
+    await vi.waitFor(() => expect(started).toEqual(["llama3"]));
+    expect(streamChatMock).toHaveBeenCalledTimes(1);
+
+    finishers[0]();
+    await vi.waitFor(() => expect(started).toEqual(["llama3", "tinyllama"]));
+
+    finishers[1]();
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+  });
+
+  it("renders side A's scores while side B is still queued, with per-side status", async () => {
+    const finishers: (() => void)[] = [];
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((resolve) => {
+          finishers.push(() => {
+            opts.onDone({ thinking: `thoughts:${opts.model}`, content: "ans" });
+            resolve();
+          });
+        }),
+    );
+
+    const { container, activate, promptBox, modelSelect, startButton } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    fireEvent.click(startButton);
+
+    const statusA = () => container.querySelector(".live-status-a")!.textContent ?? "";
+    const statusB = () => container.querySelector(".live-status-b")!.textContent ?? "";
+
+    await vi.waitFor(() => expect(statusA()).toContain("streaming"));
+    expect(statusB()).toContain("waiting");
+
+    // A finishes: its column must render immediately, not wait for B.
+    finishers[0]();
+    await vi.waitFor(() => expect(statusA()).toContain("done"));
+    expect(container.querySelector(".compare-composite")!.textContent).toContain(
+      `${"thoughts:llama3".length}.0`,
+    );
+    await vi.waitFor(() => expect(statusB()).toContain("streaming"));
+
+    finishers[1]();
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+  });
+
+  it("abandons a side that never responds after the stall timeout, then runs the other", async () => {
+    const signals: Record<string, AbortSignal | undefined> = {};
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((resolve, reject) => {
+          signals[opts.model] = opts.signal;
+          if (opts.model === "llama3") {
+            // Model A never emits a single byte (Ollama queued it behind a
+            // model it cannot co-load) — exactly the observed hang.
+            opts.signal?.addEventListener("abort", () => {
+              reject(new DOMException("aborted", "AbortError"));
+            });
+            return;
+          }
+          opts.onDone({ thinking: `thoughts:${opts.model}`, content: "ans" });
+          resolve();
+        }),
+    );
+
+    const { container, activate, promptBox, modelSelect, startButton } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    vi.useFakeTimers();
+    fireEvent.click(startButton);
+
+    await vi.waitFor(() => expect(signals["llama3"]).toBeDefined());
+    expect(signals["llama3"]?.aborted).toBe(false);
+
+    vi.advanceTimersByTime(COMPARE_STALL_MS + 1000);
+    await vi.waitFor(() => expect(signals["llama3"]?.aborted).toBe(true));
+
+    // The stalled side is reported, and B still gets its turn.
+    await vi.waitFor(() =>
+      expect(container.querySelector(".live-status-a")!.textContent?.toLowerCase()).toContain(
+        "no response",
+      ),
+    );
+    await vi.waitFor(() => expect(signals["tinyllama"]).toBeDefined());
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+  });
+
+  it("Stop aborts the in-flight side and never starts the second model", async () => {
+    const started: string[] = [];
     const signals: (AbortSignal | undefined)[] = [];
     streamChatMock.mockImplementation(
       (opts) =>
         new Promise<void>((_resolve, reject) => {
+          started.push(opts.model);
           signals.push(opts.signal);
           opts.signal?.addEventListener("abort", () => {
             reject(new DOMException("aborted", "AbortError"));
@@ -473,12 +593,13 @@ describe("LivePanel: compare mode", () => {
 
     fireEvent.change(promptBox, { target: { value: "hi" } });
     fireEvent.click(startButton);
-    await vi.waitFor(() => expect(signals).toHaveLength(2));
+    await vi.waitFor(() => expect(started).toEqual(["llama3"]));
 
     fireEvent.click(startButton); // Stop
     expect(signals.every((signal) => signal?.aborted)).toBe(true);
 
     await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+    expect(started).toEqual(["llama3"]); // B must never have been requested
     expect(errorArea.hidden).toBe(true);
   });
 

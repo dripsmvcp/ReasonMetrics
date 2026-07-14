@@ -114,6 +114,15 @@ body {
   gap: 0.75rem;
 }
 
+.live-compare-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  font-size: 0.85em;
+  opacity: 0.8;
+  max-width: 40rem;
+}
+
 .compare-scores {
   display: flex;
   flex-direction: column;
