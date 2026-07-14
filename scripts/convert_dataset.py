@@ -38,6 +38,26 @@ def _progress(iterable, total: int, prefix: str = ""):
             sys.stderr.flush()
     sys.stderr.write("\n")
 
+
+def _require(row: dict, column: str, dataset: str) -> str:
+    """Read a column that MUST exist, or fail loudly.
+
+    Silent `row.get(a, row.get(b, ""))` fallback chains are how a schema
+    mismatch turns into a corrupt corpus instead of an error: the s1K
+    converter used to fall back to `solution` — the GROUND-TRUTH answer — as
+    the reasoning trace, so the scorers were fed polished reference prose that
+    no model ever reasoned. A missing column is a bug in the converter, and
+    must stop the run rather than quietly produce garbage.
+    """
+    value = row.get(column)
+    if not isinstance(value, str) or not value.strip():
+        raise KeyError(
+            f"{dataset}: required column {column!r} is missing or empty — "
+            f"the dataset schema has changed. Columns present: {sorted(row)}"
+        )
+    return value
+
+
 def convert_limo(max_rows: int | None) -> tuple[str, list[dict]]:
     """GAIR/LIMO — 817 curated math reasoning traces."""
     from datasets import load_dataset
@@ -60,7 +80,20 @@ def convert_limo(max_rows: int | None) -> tuple[str, list[dict]]:
 
 
 def convert_s1k(max_rows: int | None) -> tuple[str, list[dict]]:
-    """simplescaling/s1K-1.1 — 1K multi-domain traces with <think> tags."""
+    """simplescaling/s1K-1.1 — 1K multi-domain traces.
+
+    Column semantics (dataset card):
+      question                     — the problem
+      solution                     — the GROUND-TRUTH solution (NOT a trace)
+      deepseek_thinking_trajectory — the reasoning trace R1 actually produced
+      deepseek_attempt             — R1's final answer
+
+    `solution` is reference prose written by humans/verifiers; scoring it as a
+    reasoning trace measures nothing about a model's thinking and inflates
+    every structure/verification signal. docs/CALIBRATION.md has always
+    documented `deepseek_thinking_trajectory` as this corpus's thinking field —
+    this converter is what disagreed.
+    """
     from datasets import load_dataset
     ds = load_dataset("simplescaling/s1K-1.1", split="train")
     if max_rows:
@@ -69,17 +102,16 @@ def convert_s1k(max_rows: int | None) -> tuple[str, list[dict]]:
     total = len(ds)
     traces = []
     for i, row in enumerate(_progress(ds, total, "s1K")):
-        question = row.get("question", row.get("problem", ""))
-        thinking = row.get("solution", row.get("thinking", row.get("response", "")))
-        answer = row.get("answer", "")
-
         traces.append({
             "id": f"s1k_{i}",
-            "problem": question,
-            "thinking": thinking,
-            "answer": answer,
+            "problem": _require(row, "question", "s1K-1.1"),
+            "thinking": _require(row, "deepseek_thinking_trajectory", "s1K-1.1"),
+            # R1's own answer, so problem/thinking/answer all come from the
+            # same generation. `answer` was read from a column that does not
+            # exist in this dataset, so it was silently always "".
+            "answer": row.get("deepseek_attempt", ""),
             "source": "simplescaling/s1K-1.1",
-            "domain": row.get("domain", "multi"),
+            "domain": row.get("cot_type", "multi"),
         })
     return "s1k_traces.jsonl", traces
 
@@ -220,7 +252,12 @@ def main():
     skipped = original_count - len(traces)
 
     output_path = Path(output_file)
-    with open(output_path, "w") as f:
+    # encoding is explicit because the payload is deliberately NOT ASCII-escaped
+    # (ensure_ascii=False): under a C/POSIX locale Python picks latin-1 here and
+    # the write dies on the first non-ASCII character — a `≠` in a math trace, or
+    # any Chinese/Japanese reasoning, which is precisely the corpus this project
+    # cares about.
+    with open(output_path, "w", encoding="utf-8") as f:
         for trace in traces:
             f.write(json.dumps(trace, ensure_ascii=False) + "\n")
 
