@@ -14,10 +14,13 @@ import {
   type Throttled,
 } from "../lib/ollama";
 import { readStorage, writeStorage } from "../lib/storage";
-import type { TraceInput } from "../lib/types";
+import { analyzeTrace } from "../lib/wasm";
+import type { AnalysisResult, TraceInput } from "../lib/types";
+import { CompareScores } from "./CompareScores";
 
 const STORAGE_BASE_URL = "reasonmetrics.ollama.baseUrl";
 const STORAGE_MODEL = "reasonmetrics.ollama.model";
+const STORAGE_MODEL_B = "reasonmetrics.ollama.modelB";
 const DEFAULT_BASE_URL = "http://localhost:11434";
 const THROTTLE_MS = 500;
 
@@ -42,18 +45,27 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
   const [prompt, setPrompt] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [modelB, setModelB] = useState("");
+  const [resultA, setResultA] = useState<AnalysisResult | null>(null);
+  const [resultB, setResultB] = useState<AnalysisResult | null>(null);
 
   // Mutable refs, not state: Stop must see and cancel the in-flight
   // controller/throttle synchronously, in the same tick as the click — an
   // extra render cycle here would leave a window where a stale trailing
   // analysis (or a duplicate stream) could fire after Stop.
   const controllerRef = useRef<AbortController | null>(null);
-  const activeThrottleRef = useRef<Throttled<[TraceInput]> | null>(null);
+  const activeThrottlesRef = useRef<Throttled<[TraceInput]>[]>([]);
   const activatedRef = useRef(false);
   const baseUrlRef = useRef(baseUrl);
   baseUrlRef.current = baseUrl;
   const selectedModelRef = useRef(selectedModel);
   selectedModelRef.current = selectedModel;
+  const modelBRef = useRef(modelB);
+  modelBRef.current = modelB;
+  // Last trace assembled per compare side, for "Open in detail".
+  const recordARef = useRef<TraceInput | null>(null);
+  const recordBRef = useRef<TraceInput | null>(null);
 
   function showConnectionError(err: unknown): void {
     if (err instanceof OllamaHttpError) {
@@ -74,8 +86,12 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
     try {
       const list = await listModels(baseUrlRef.current);
       const savedModel = readStorage(STORAGE_MODEL);
+      const savedModelB = readStorage(STORAGE_MODEL_B);
       setModels(list);
       setSelectedModel(savedModel && list.includes(savedModel) ? savedModel : (list[0] ?? ""));
+      setModelB(
+        savedModelB && list.includes(savedModelB) ? savedModelB : (list[1] ?? list[0] ?? ""),
+      );
     } catch (err) {
       showConnectionError(err);
     }
@@ -103,6 +119,11 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
     if (value) writeStorage(STORAGE_MODEL, value);
   }
 
+  function handleModelBChange(value: string): void {
+    setModelB(value);
+    if (value) writeStorage(STORAGE_MODEL_B, value);
+  }
+
   async function startStreaming(): Promise<void> {
     setError(null);
     writeStorage(STORAGE_BASE_URL, baseUrlRef.current);
@@ -113,7 +134,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
     setStreaming(true);
 
     const analyzeThrottled = throttle(onAnalyze, THROTTLE_MS);
-    activeThrottleRef.current = analyzeThrottled;
+    activeThrottlesRef.current = [analyzeThrottled];
     const currentPrompt = prompt;
 
     try {
@@ -134,7 +155,78 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
       }
     } finally {
       analyzeThrottled.cancel();
-      activeThrottleRef.current = null;
+      activeThrottlesRef.current = [];
+      controllerRef.current = null;
+      setStreaming(false);
+    }
+  }
+
+  /** One compare side: stream a model, re-scoring the partial trace through
+   * the same wasm analyzeTrace the main pipeline uses, into that side's
+   * result slot. Mid-stream analysis failures are ignored (the last good
+   * tick stays on screen, matching the single-model keep-last semantics). */
+  async function streamCompareSide(
+    model: string,
+    currentPrompt: string,
+    controller: AbortController,
+    setResult: (result: AnalysisResult) => void,
+    recordRef: { current: TraceInput | null },
+  ): Promise<void> {
+    const analyze = (rec: TraceInput) => {
+      recordRef.current = rec;
+      try {
+        setResult(analyzeTrace(rec));
+      } catch {
+        /* keep the previous tick's result */
+      }
+    };
+    const analyzeThrottled = throttle(analyze, THROTTLE_MS);
+    activeThrottlesRef.current.push(analyzeThrottled);
+
+    try {
+      await streamChat({
+        baseUrl: baseUrlRef.current,
+        model,
+        prompt: currentPrompt,
+        signal: controller.signal,
+        onDelta: (delta) => analyzeThrottled(toTraceInput(currentPrompt, delta)),
+        onDone: (final) => {
+          analyzeThrottled.cancel();
+          analyze(toTraceInput(currentPrompt, final));
+        },
+      });
+    } catch (err) {
+      if (!isAbortError(err)) {
+        showConnectionError(err);
+      }
+    } finally {
+      analyzeThrottled.cancel();
+    }
+  }
+
+  async function startComparing(): Promise<void> {
+    setError(null);
+    writeStorage(STORAGE_BASE_URL, baseUrlRef.current);
+    if (selectedModelRef.current) writeStorage(STORAGE_MODEL, selectedModelRef.current);
+    if (modelBRef.current) writeStorage(STORAGE_MODEL_B, modelBRef.current);
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setStreaming(true);
+    setResultA(null);
+    setResultB(null);
+    recordARef.current = null;
+    recordBRef.current = null;
+    activeThrottlesRef.current = [];
+    const currentPrompt = prompt;
+
+    try {
+      await Promise.all([
+        streamCompareSide(selectedModelRef.current, currentPrompt, controller, setResultA, recordARef),
+        streamCompareSide(modelBRef.current, currentPrompt, controller, setResultB, recordBRef),
+      ]);
+    } finally {
+      activeThrottlesRef.current = [];
       controllerRef.current = null;
       setStreaming(false);
     }
@@ -142,13 +234,21 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
 
   function handleStartStopClick(): void {
     if (controllerRef.current) {
-      activeThrottleRef.current?.cancel();
+      for (const throttled of activeThrottlesRef.current) throttled.cancel();
       controllerRef.current.abort();
       return;
     }
     if (prompt.trim().length === 0) return;
     if (!selectedModelRef.current) {
       setError('No model selected — click "Refresh models" to load the list.');
+      return;
+    }
+    if (compareMode) {
+      if (!modelBRef.current) {
+        setError('No second model selected — click "Refresh models" to load the list.');
+        return;
+      }
+      void startComparing();
       return;
     }
     void startStreaming();
@@ -179,9 +279,33 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
           ))}
         </select>
 
+        {compareMode && (
+          <select
+            className="live-model-b"
+            value={modelB}
+            onChange={(event) => handleModelBChange(event.target.value)}
+          >
+            {models.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
+
         <button type="button" className="live-refresh" onClick={() => void refreshModels()}>
           Refresh models
         </button>
+
+        <label className="live-compare-toggle">
+          <input
+            type="checkbox"
+            checked={compareMode}
+            disabled={streaming}
+            onChange={(event) => setCompareMode(event.target.checked)}
+          />{" "}
+          Compare two models
+        </label>
       </div>
 
       <textarea
@@ -198,6 +322,30 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
       <p className="live-error" hidden={!error}>
         {error ?? ""}
       </p>
+
+      {compareMode && (resultA || resultB) && (
+        <div className="live-compare">
+          <CompareScores labelA={selectedModel} labelB={modelB} a={resultA} b={resultB} />
+          <div className="live-compare-actions">
+            <button
+              type="button"
+              className="live-open-a"
+              disabled={!resultA}
+              onClick={() => recordARef.current && onAnalyze(recordARef.current)}
+            >
+              {`Open ${selectedModel || "A"} in detail`}
+            </button>
+            <button
+              type="button"
+              className="live-open-b"
+              disabled={!resultB}
+              onClick={() => recordBRef.current && onAnalyze(recordBRef.current)}
+            >
+              {`Open ${modelB || "B"} in detail`}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

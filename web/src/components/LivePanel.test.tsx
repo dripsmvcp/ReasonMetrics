@@ -23,10 +23,31 @@ vi.mock("../lib/ollama", async (importOriginal) => {
   };
 });
 
+// The real analyzeTrace needs the wasm module; compare mode calls it directly
+// (single-model mode still routes through onAnalyze and never touches it).
+vi.mock("../lib/wasm", () => ({
+  initWasm: vi.fn(),
+  analyzeTrace: vi.fn(),
+}));
+
 import { listModels, streamChat } from "../lib/ollama";
+import { analyzeTrace } from "../lib/wasm";
+import type { AnalysisResult, ScoredTrace } from "../lib/types";
 
 const listModelsMock = vi.mocked(listModels);
 const streamChatMock = vi.mocked(streamChat);
+const analyzeTraceMock = vi.mocked(analyzeTrace);
+
+function fakeResult(rec: TraceInput): AnalysisResult {
+  return {
+    composite: rec.thinking.length,
+    scores: [{ name: "structure", score: 50, weight: 0.1, diagnostics: [] }],
+    annotations: [],
+    tokenCount: 1,
+    extractedThinking: rec.thinking,
+    scored: { quality_score: rec.thinking.length } as ScoredTrace,
+  };
+}
 
 function setup(initialActive = false) {
   const onAnalyze = vi.fn<(record: TraceInput) => void>();
@@ -54,6 +75,7 @@ beforeEach(() => {
   localStorage.clear();
   listModelsMock.mockReset().mockResolvedValue(["llama3", "tinyllama"]);
   streamChatMock.mockReset();
+  analyzeTraceMock.mockReset().mockImplementation(fakeResult);
 });
 
 afterEach(() => {
@@ -352,5 +374,135 @@ describe("LivePanel: streaming", () => {
     await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
     expect(errorArea.hidden).toBe(true);
     expect(onAnalyze).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("LivePanel: compare mode", () => {
+  function enableCompare(container: HTMLElement) {
+    const toggle = container.querySelector<HTMLInputElement>(".live-compare-toggle input")!;
+    fireEvent.click(toggle);
+    return toggle;
+  }
+
+  it("shows the second model select when toggled, defaulting to the second model", async () => {
+    const { container, activate, modelSelect } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    expect(container.querySelector(".live-model-b")).toBeNull();
+    enableCompare(container);
+
+    const modelBSelect = container.querySelector<HTMLSelectElement>("select.live-model-b")!;
+    expect(modelBSelect.value).toBe("tinyllama");
+
+    fireEvent.change(modelBSelect, { target: { value: "llama3" } });
+    expect(localStorage.getItem("reasonmetrics.ollama.modelB")).toBe("llama3");
+  });
+
+  it("streams both models on Start, renders the side-by-side table, and leaves the main pipeline alone", async () => {
+    streamChatMock.mockImplementation(async (opts) => {
+      opts.onDone({ thinking: `thoughts:${opts.model}`, content: "ans" });
+    });
+
+    const { container, activate, promptBox, modelSelect, startButton, onAnalyze } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    fireEvent.click(startButton);
+
+    await vi.waitFor(() => expect(streamChatMock).toHaveBeenCalledTimes(2));
+    const streamedModels = streamChatMock.mock.calls.map(([opts]) => opts.model).sort();
+    expect(streamedModels).toEqual(["llama3", "tinyllama"]);
+
+    await vi.waitFor(() =>
+      expect(container.querySelector(".compare-scores")).not.toBeNull(),
+    );
+    // fakeResult sets composite = thinking.length, so both sides rendered
+    // "thoughts:<model>".length as the composite.
+    const composite = container.querySelector(".compare-composite")!;
+    expect(composite.textContent).toContain(`${"thoughts:llama3".length}.0`);
+    expect(composite.textContent).toContain(`${"thoughts:tinyllama".length}.0`);
+
+    // Compare mode renders inline — the shared detail pipeline is not driven.
+    expect(onAnalyze).not.toHaveBeenCalled();
+  });
+
+  it("opens a side in the detail view via onAnalyze with that side's assembled trace", async () => {
+    streamChatMock.mockImplementation(async (opts) => {
+      opts.onDone({ thinking: `thoughts:${opts.model}`, content: "ans" });
+    });
+
+    const { container, activate, promptBox, modelSelect, startButton, onAnalyze } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "2+2?" } });
+    fireEvent.click(startButton);
+    await vi.waitFor(() =>
+      expect(container.querySelector(".compare-scores")).not.toBeNull(),
+    );
+
+    fireEvent.click(container.querySelector<HTMLButtonElement>("button.live-open-b")!);
+    expect(onAnalyze).toHaveBeenCalledTimes(1);
+    expect(onAnalyze).toHaveBeenCalledWith({
+      problem: "2+2?",
+      thinking: "thoughts:tinyllama",
+      answer: "ans",
+    });
+  });
+
+  it("Stop aborts both streams", async () => {
+    const signals: (AbortSignal | undefined)[] = [];
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((_resolve, reject) => {
+          signals.push(opts.signal);
+          opts.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
+
+    const { container, activate, promptBox, modelSelect, startButton, errorArea } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "hi" } });
+    fireEvent.click(startButton);
+    await vi.waitFor(() => expect(signals).toHaveLength(2));
+
+    fireEvent.click(startButton); // Stop
+    expect(signals.every((signal) => signal?.aborted)).toBe(true);
+
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Start"));
+    expect(errorArea.hidden).toBe(true);
+  });
+
+  it("keeps the toggle disabled while streaming", async () => {
+    streamChatMock.mockImplementation(
+      (opts) =>
+        new Promise<void>((_resolve, reject) => {
+          opts.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        }),
+    );
+
+    const { container, activate, promptBox, modelSelect, startButton } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+    const toggle = enableCompare(container);
+
+    fireEvent.change(promptBox, { target: { value: "hi" } });
+    fireEvent.click(startButton);
+    await vi.waitFor(() => expect(startButton.textContent).toBe("Stop"));
+    expect(toggle.disabled).toBe(true);
+
+    fireEvent.click(startButton); // Stop
+    await vi.waitFor(() => expect(toggle.disabled).toBe(false));
   });
 });
