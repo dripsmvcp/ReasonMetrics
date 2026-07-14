@@ -85,11 +85,32 @@ is undefined.
 - **The composite tracks the judge within every corpus** (+0.09 / +0.31 /
   +0.53), strongest exactly where traces are long R1-style reasoning, which
   is the tool's target input.
-- **`structural_score` is miscalibrated**: zero-to-negative everywhere,
-  −0.40 on medical. Rigid markdown/enumeration structure does not predict
-  judged quality — conversational traces judged best score worst on it. Filed
-  as [#13](https://github.com/dripsmvcp/ReasonMetrics/issues/13); treat this
-  dimension as formatting description, not quality, until it is reworked.
+- **`structural_score` is miscalibrated — and we now know why: it is a length
+  proxy.** Measured on all 2,517 scored traces, with no judge involved,
+  `structural_score` correlates **ρ = +0.50 with trace word count** (+0.64 on
+  the judged subset). The judge moves the other way: **ρ = −0.53** between word
+  count and `logical_validity`. That single fact accounts for the whole
+  anti-correlation. It also means the dimension carries no independent signal —
+  length is already captured, and captured *better*, by `length_score` (+0.38)
+  and `overthinking_score` (+0.31), which correlate positively *because* they
+  penalise length.
+
+  Three candidate fixes were tried and refuted by measurement: dropping the
+  backtracking tics from its marker list (a real defect — `efficiency.rs`
+  counts the same `"wait,"` / `"hmm,"` / `"actually,"` phrases as *restarts* and
+  penalises them, so the same tic is both punished and rewarded — but it moved ρ
+  only from −0.44 to −0.43); score saturation (rejected: `length_score` is at its
+  ceiling 55% of the time and still correlates +0.38); and normalising the
+  paragraph term by length (+0.50 → +0.49). The confound is what the metric
+  measures, not a bug in one term.
+
+  Dropping it from the composite entirely lifts the mean per-dataset ρ from
+  +0.31 to +0.36 — **suggestive, not decisive**: at n=20 per dataset the standard
+  error on a Spearman is ≈0.24, so that difference sits inside the noise, and no
+  weight was changed on the strength of it. Tracking in
+  [#13](https://github.com/dripsmvcp/ReasonMetrics/issues/13). Until it is
+  reworked or dropped, treat this dimension as a description of formatting, not
+  of quality.
 - **The judge itself is a blunt instrument**: it graded 95% of traces ≥80
   and its four dimensions intercorrelate +0.36..+0.70 (halo effect). Judge
   leniency compresses ranks and attenuates every ρ above.
