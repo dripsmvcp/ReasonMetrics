@@ -147,6 +147,22 @@ describe("App: analyzeTrace error handling", () => {
     await vi.waitFor(() => expect(analyzeTraceMock).toHaveBeenCalledTimes(3));
     expect(container.textContent).not.toContain("analysis failed");
   });
+
+  it("announces the failure to assistive tech", () => {
+    const { container } = render(<App />);
+
+    analyzeTraceMock.mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
+    pasteRecord({ problem: "p", thinking: "t", answer: "a" });
+
+    // role="alert" on a freshly-mounted node is the pattern screen readers
+    // announce reliably; a purely visual error leaves a non-sighted user
+    // staring at an app that silently did nothing.
+    const error = container.querySelector<HTMLElement>(".analysis-error")!;
+    expect(error).not.toBeNull();
+    expect(error.getAttribute("role")).toBe("alert");
+  });
 });
 
 describe("App: single analyze pipeline", () => {

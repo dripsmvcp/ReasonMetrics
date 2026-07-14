@@ -63,9 +63,14 @@ export function MappingDialog({ sample, initialMapping, onApply }: MappingDialog
           </select>
         </label>
       ))}
-      <p className="mapping-error" hidden={!showError}>
-        Assign one field to thinking — it's the only required field.
-      </p>
+      {/* Mounted only while the error stands, rather than kept in the DOM and
+       * toggled with `hidden`: a role="alert" node that is inserted is what
+       * screen readers announce reliably — one that merely un-hides is not. */}
+      {showError && (
+        <p className="mapping-error" role="alert">
+          Assign one field to thinking — it's the only required field.
+        </p>
+      )}
       <button type="button" className="mapping-apply" onClick={handleApply}>
         Apply mapping
       </button>

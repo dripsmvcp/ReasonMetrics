@@ -88,6 +88,10 @@ describe("InputPanel: field-mapping dialog", () => {
     const error = container.querySelector<HTMLElement>(".mapping-error")!;
     expect(error.hidden).toBe(false);
     expect(error.textContent).toContain("thinking");
+    // Mounted with role="alert" so a screen reader announces it — a silently
+    // rejected Apply leaves a non-sighted user with no idea why nothing
+    // happened.
+    expect(error.getAttribute("role")).toBe("alert");
 
     // Correcting the mapping recovers: the same dialog applies cleanly.
     fireEvent.change(selectByKey("bar"), { target: { value: "thinking" } });

@@ -39,6 +39,7 @@ const EMPTY_NOTE: RecordListNote = { hidden: true, text: "" };
 
 export function InputPanel({ onSelect, resetToken }: InputPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const filePickerRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [note, setNote] = useState<RecordListNote>(EMPTY_NOTE);
   const [records, setRecords] = useState<TraceInput[]>([]);
@@ -96,15 +97,30 @@ export function InputPanel({ onSelect, resetToken }: InputPanelProps) {
     renderRecords(inputs);
   }
 
+  /** The one path a file takes into the app, whether it was dropped on the
+   * zone or chosen through the picker. */
+  function readFile(file: File): void {
+    void file.text().then((text) => {
+      if (textareaRef.current) textareaRef.current.value = text;
+      handleText(text);
+    });
+  }
+
   function handleDrop(event: React.DragEvent<HTMLDivElement>): void {
     event.preventDefault();
     setDragOver(false);
     const file = event.dataTransfer?.files?.[0];
     if (!file) return;
-    void file.text().then((text) => {
-      if (textareaRef.current) textareaRef.current.value = text;
-      handleText(text);
-    });
+    readFile(file);
+  }
+
+  function handleFilePicked(event: React.ChangeEvent<HTMLInputElement>): void {
+    const file = event.target.files?.[0];
+    // Reset first: without this, picking the SAME file twice in a row fires
+    // no change event the second time.
+    event.target.value = "";
+    if (!file) return;
+    readFile(file);
   }
 
   return (
@@ -112,6 +128,15 @@ export function InputPanel({ onSelect, resetToken }: InputPanelProps) {
       <div
         className={dragOver ? "drop-zone drag-over" : "drop-zone"}
         tabIndex={0}
+        role="button"
+        aria-label="Choose a .jsonl, .json, or .txt file to analyze, or drop one here"
+        onClick={() => filePickerRef.current?.click()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            filePickerRef.current?.click();
+          }
+        }}
         onDragOver={(event) => {
           event.preventDefault();
           setDragOver(true);
@@ -119,8 +144,17 @@ export function InputPanel({ onSelect, resetToken }: InputPanelProps) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        Drop a .jsonl, .json, or .txt file here
+        Drop a .jsonl, .json, or .txt file here — or click to browse
       </div>
+
+      <input
+        ref={filePickerRef}
+        type="file"
+        className="file-picker"
+        accept=".jsonl,.json,.txt,application/json,application/jsonl,text/plain"
+        hidden
+        onChange={handleFilePicked}
+      />
 
       <textarea
         ref={textareaRef}

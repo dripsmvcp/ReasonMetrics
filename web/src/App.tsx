@@ -99,7 +99,9 @@ export default function App() {
       <div id="live-panel-container" hidden={mode !== "live"}>
         <LivePanel onAnalyze={onAnalyze} active={mode === "live"} />
       </div>
-      {analysisError && <p className="analysis-error">{`analysis failed: ${analysisError}`}</p>}
+      {analysisError && (
+        <p className="analysis-error" role="alert">{`analysis failed: ${analysisError}`}</p>
+      )}
       <div id="share-bar-container" hidden={!result}>
         {record && result && (
           <ShareBar

@@ -93,3 +93,52 @@ describe("InputPanel: drag-and-drop", () => {
     });
   });
 });
+
+describe("InputPanel: click-to-browse", () => {
+  // The zone has always shown `cursor: pointer` while clicking it did
+  // nothing — and a keyboard user could focus it with no way to act on it.
+  it("opens the file picker when the drop zone is clicked", () => {
+    const { container } = setup();
+    const dropZone = container.querySelector<HTMLElement>(".drop-zone")!;
+    const picker = container.querySelector<HTMLInputElement>("input.file-picker")!;
+    const click = vi.spyOn(picker, "click");
+
+    fireEvent.click(dropZone);
+
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["Enter", " "])("opens the file picker on %s from the keyboard", (key) => {
+    const { container } = setup();
+    const dropZone = container.querySelector<HTMLElement>(".drop-zone")!;
+    const picker = container.querySelector<HTMLInputElement>("input.file-picker")!;
+    const click = vi.spyOn(picker, "click");
+
+    fireEvent.keyDown(dropZone, { key });
+
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it("routes a picked file through the same detection path as a dropped one", async () => {
+    const { container, onSelect } = setup();
+    const picker = container.querySelector<HTMLInputElement>("input.file-picker")!;
+    const file = new File(['{"problem":"P","thinking":"T","answer":"A"}'], "trace.json", {
+      type: "application/json",
+    });
+
+    fireEvent.change(picker, { target: { files: [file] } });
+
+    await vi.waitFor(() => {
+      expect(onSelect).toHaveBeenCalledWith({ id: "1", problem: "P", thinking: "T", answer: "A" });
+    });
+  });
+
+  it("exposes the zone to assistive tech as an activatable control", () => {
+    const { container } = setup();
+    const dropZone = container.querySelector<HTMLElement>(".drop-zone")!;
+
+    expect(dropZone.getAttribute("role")).toBe("button");
+    expect(dropZone.tabIndex).toBe(0);
+    expect(dropZone.getAttribute("aria-label")).toBeTruthy();
+  });
+});
