@@ -113,6 +113,29 @@ describe("LivePanel: settings", () => {
     expect(localStorage.getItem("reasonmetrics.ollama.baseUrl")).toBe("http://localhost:12345");
     expect(localStorage.getItem("reasonmetrics.ollama.model")).toBe("tinyllama");
   });
+
+  // The persistence half is covered above; these cover the RE-selection half —
+  // what happens to a saved choice once /api/tags actually returns.
+  it("re-selects a saved model once the model list loads", async () => {
+    localStorage.setItem("reasonmetrics.ollama.model", "tinyllama");
+
+    const { activate, modelSelect } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    // Not the list's first entry — the saved one.
+    expect(modelSelect.value).toBe("tinyllama");
+  });
+
+  it("falls back to the first model when the saved one is no longer installed", async () => {
+    localStorage.setItem("reasonmetrics.ollama.model", "uninstalled-model");
+
+    const { activate, modelSelect } = setup();
+    activate();
+    await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
+
+    expect(modelSelect.value).toBe("llama3");
+  });
 });
 
 describe("LivePanel: deferred model probe (no auto-connect on load)", () => {
