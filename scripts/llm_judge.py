@@ -246,8 +246,13 @@ def run_judge(
     sample_n: int | None = None,
     workers: int = 4,
     seed: int = 42,
+    flush_path: str | None = None,
 ) -> list[JudgeResult]:
-    """Run the LLM judge on a sample of traces with a live progress bar."""
+    """Run the LLM judge on a sample of traces with a live progress bar.
+
+    If flush_path is given, each result is appended to it as it completes,
+    so a crashed or killed run keeps everything judged so far.
+    """
     if sample_n and sample_n < len(traces):
         rng = random.Random(seed)
         traces = rng.sample(traces, sample_n)
@@ -261,12 +266,18 @@ def run_judge(
     print(f"  API endpoint   : {config.api_url}")
     print(f"  Traces to judge: {total}  ({workers} concurrent workers)\n")
 
+    flush_file = open(flush_path, "w") if flush_path else None
+
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(call_judge, t, config): t.get("id", "?") for t in traces}
 
         for i, future in enumerate(as_completed(futures), 1):
             result = future.result()
             results.append(result)
+
+            if flush_file:
+                flush_file.write(json.dumps(_result_to_dict(result)) + "\n")
+                flush_file.flush()
 
             if result.error:
                 errors += 1
@@ -290,6 +301,8 @@ def run_judge(
             sys.stdout.flush()
 
     elapsed = time.time() - start
+    if flush_file:
+        flush_file.close()
     sys.stdout.write("\n")
     print(f"\n  Done in {elapsed:.1f}s · {errors} errors · {total - errors} scored")
     return results
@@ -327,20 +340,24 @@ def print_summary(results: list[JudgeResult]) -> None:
     print(f"    Low  (<50): {low:>4} ({low/n*100:.1f}%)")
 
 
+def _result_to_dict(r: JudgeResult) -> dict[str, Any]:
+    return {
+        "trace_id": r.trace_id,
+        "logical_validity": r.logical_validity,
+        "factual_correctness": r.factual_correctness,
+        "answer_correctness": r.answer_correctness,
+        "reasoning_completeness": r.reasoning_completeness,
+        "semantic_composite": r.semantic_composite,
+        "explanation": r.explanation,
+        "error": r.error,
+    }
+
+
 def save_results(results: list[JudgeResult], output_path: str) -> None:
     """Save results to JSONL."""
     with open(output_path, "w") as f:
         for r in results:
-            f.write(json.dumps({
-                "trace_id": r.trace_id,
-                "logical_validity": r.logical_validity,
-                "factual_correctness": r.factual_correctness,
-                "answer_correctness": r.answer_correctness,
-                "reasoning_completeness": r.reasoning_completeness,
-                "semantic_composite": r.semantic_composite,
-                "explanation": r.explanation,
-                "error": r.error,
-            }) + "\n")
+            f.write(json.dumps(_result_to_dict(r)) + "\n")
     print(f"\n  Results saved → {output_path}")
 
 
@@ -379,6 +396,8 @@ def main() -> None:
                         help="Model name (overrides provider default)")
     parser.add_argument("--workers", type=int, default=4,
                         help="Concurrent API requests (default: 4)")
+    parser.add_argument("--timeout", type=float, default=60.0,
+                        help="Per-request timeout in seconds (default: 60; raise for local models)")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for sampling")
 
@@ -419,18 +438,20 @@ def main() -> None:
         print("\n  Or use: --provider ollama  (no key needed)\n", file=sys.stderr)
         sys.exit(1)
 
-    config = JudgeConfig(api_url=api_url, api_key=api_key, model=model)
+    config = JudgeConfig(api_url=api_url, api_key=api_key, model=model, timeout=args.timeout)
 
     # ── Load and run ─────────────────────────────────────────────
     traces = load_traces(args.input)
     print(f"\n  Loaded {len(traces)} traces from {args.input}")
 
+    output_path = args.output or str(Path(args.input).stem) + "_judged.jsonl"
+
     results = run_judge(traces, config, sample_n=args.sample,
-                        workers=args.workers, seed=args.seed)
+                        workers=args.workers, seed=args.seed,
+                        flush_path=output_path)
 
     print_summary(results)
 
-    output_path = args.output or str(Path(args.input).stem) + "_judged.jsonl"
     save_results(results, output_path)
 
 

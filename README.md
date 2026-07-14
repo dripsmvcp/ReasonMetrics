@@ -146,6 +146,8 @@ Accepts aliases: `question`/`prompt`/`query`/`input` for problem; `reasoning`/`c
 
 Scores are heuristics — a lens, not ground truth. The failure modes are documented and pinned by adversarial tests: see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
+Measured against an LLM judge on 60 stratified traces: the composite tracks judged quality within every corpus (Spearman ρ up to **+0.53** on long R1-style traces; self-verification is the most consistent signal at ρ ≈ +0.4 across all three), while one dimension came back miscalibrated — we say which, and opened an issue. Tables, method, and caveats: [docs/CALIBRATION.md](docs/CALIBRATION.md).
+
 ## Validated Datasets
 
 Tested against 5 open-source reasoning-trace datasets (~940K total traces):

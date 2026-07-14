@@ -9,3 +9,6 @@ pkg/
 # local agent/session scratch — never publish
 .superpowers/
 .playwright-mcp/
+
+# Python
+__pycache__/
