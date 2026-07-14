@@ -12,7 +12,9 @@ permissions:
 
 jobs:
   guard:
-    if: github.event.pull_request.user.login != 'dripsmvcp'
+    # TEMPORARY (revert to `!=`): inverted so the guard actually RUNS on the
+    # maintainer's own PRs, to verify it works. It has never executed once.
+    if: github.event.pull_request.user.login == 'dripsmvcp'
     runs-on: ubuntu-latest
     steps:
       - name: Check maintainer-only paths
