@@ -183,10 +183,22 @@ pub struct ScoredTrace {
     pub thinking: String,
     pub answer: String,
 
-    /// Weighted average of all 8 scores (0-100)
+    /// Percentile against a reference corpus of real reasoning traces (0-100):
+    /// "better than N% of real traces". This is the number to filter and rank on.
+    ///
+    /// It is `raw_score` mapped through [`crate::calibration::calibrate`]. The
+    /// mapping is monotone, so ranking is identical to the raw composite — but
+    /// the raw scale was crushed (99.9% of real traces above 70), which made
+    /// `--min-score` useless and the scorecard misleading. See issue #30.
     pub quality_score: f32,
 
-    //Individual scores (0-100 each)
+    /// The underlying weighted average of all 8 dimension scores (0-100), before
+    /// calibration. Kept for transparency and for refitting the curve.
+    pub raw_score: f32,
+
+    //Individual scores (0-100 each). NOT calibrated: these are diagnostics, and
+    //most are saturated (language_score is exactly 100 for 98.1% of real traces),
+    //so a percentile of them would be meaningless.
     pub efficiency_score: f32,
     pub language_score: f32,
     pub answer_alignment_score: f32,

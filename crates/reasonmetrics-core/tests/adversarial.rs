@@ -60,15 +60,22 @@ fn adversarial_fixtures_still_game_their_scorers() {
     paths.sort();
     assert!(paths.len() >= 7, "expected the 7 adversarial fixtures");
 
+    let mut survive_default_filter = 0;
+
     for path in paths {
         let name = path.file_stem().unwrap().to_string_lossy().to_string();
         let fixture: Fixture = serde_json::from_str(&std::fs::read_to_string(&path).unwrap())
             .unwrap_or_else(|e| panic!("{name}: bad fixture JSON: {e}"));
         let (scored, results) = score_one_detailed(&fixture.trace, &scorers);
 
+        if scored.quality_score >= 70.0 {
+            survive_default_filter += 1;
+        }
+
         eprintln!(
-            "{name}: quality={:.0} eff={:.0} lang={:.0} align={:.0} struct={:.0} rep={:.0} over={:.0} verif={:.0} len={:.0}",
+            "{name}: quality={:.0} raw={:.0} eff={:.0} lang={:.0} align={:.0} struct={:.0} rep={:.0} over={:.0} verif={:.0} len={:.0}",
             scored.quality_score,
+            scored.raw_score,
             scored.efficiency_score,
             scored.language_score,
             scored.answer_alignment_score,
@@ -115,4 +122,19 @@ fn adversarial_fixtures_still_game_their_scorers() {
             );
         }
     }
+
+    // The composite-level claim in docs/LIMITATIONS.md, pinned so it cannot
+    // drift from the code. Before the #30 calibration, 5 of these 7 garbage
+    // traces cleared the documented default filter, because 99.9% of ALL real
+    // traces did. On the calibrated scale none of them do.
+    //
+    // This is NOT the scorers getting harder to fool — every per-dimension
+    // assertion above still passes, so each fixture still games its target
+    // dimension completely. It is only the THRESHOLD becoming meaningful.
+    assert_eq!(
+        survive_default_filter, 0,
+        "{survive_default_filter} of the 7 adversarial fixtures now clear \
+         `--min-score 70`. Update docs/LIMITATIONS.md and this expectation \
+         together, so the doc never silently drifts from the code."
+    );
 }

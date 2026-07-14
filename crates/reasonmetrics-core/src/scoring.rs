@@ -33,7 +33,11 @@ pub fn score_one_detailed(
         .map(|scorer| scorer.score(trace, &extracted))
         .collect();
 
-    let quality_score = compute_composite(&score_results, scorers);
+    // The raw composite is crushed into the top of the range (99.9% of real
+    // traces above 70), so what we report is its percentile against a reference
+    // corpus of real traces. Monotone, so ranking is unchanged. See #30.
+    let raw_score = compute_composite(&score_results, scorers);
+    let quality_score = crate::calibration::calibrate(raw_score);
 
     let word_count = estimated_token_count(&extracted) as u32;
 
@@ -78,6 +82,7 @@ pub fn score_one_detailed(
         thinking: trace.thinking.clone(),
         answer: trace.answer.clone(),
         quality_score,
+        raw_score,
         efficiency_score: score_results[EFFICIENCY_IDX].score,
         language_score: score_results[LANGUAGE_IDX].score,
         answer_alignment_score: score_results[ALIGNMENT_IDX].score,

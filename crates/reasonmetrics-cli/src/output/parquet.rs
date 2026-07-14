@@ -19,6 +19,7 @@ pub fn write_parquet(scored: &[ScoredTrace], path: &Path) -> anyhow::Result<()> 
         Field::new("thinking", DataType::Utf8, false),
         Field::new("answer", DataType::Utf8, false),
         Field::new("quality_score", DataType::Float32, false),
+        Field::new("raw_score", DataType::Float32, false),
         Field::new("efficiency_score", DataType::Float32, false),
         Field::new("language_score", DataType::Float32, false),
         Field::new("answer_alignment_score", DataType::Float32, false),
@@ -55,6 +56,9 @@ pub fn write_parquet(scored: &[ScoredTrace], path: &Path) -> anyhow::Result<()> 
         )),
         Arc::new(Float32Array::from(
             scored.iter().map(|s| s.quality_score).collect::<Vec<_>>(),
+        )),
+        Arc::new(Float32Array::from(
+            scored.iter().map(|s| s.raw_score).collect::<Vec<_>>(),
         )),
         Arc::new(Float32Array::from(
             scored
@@ -157,6 +161,7 @@ mod tests {
             thinking: "T".into(),
             answer: "A".into(),
             quality_score: 75.0,
+            raw_score: 90.5,
             efficiency_score: 80.0,
             language_score: 100.0,
             answer_alignment_score: 70.0,

@@ -1,4 +1,5 @@
 pub mod annotate;
+pub mod calibration;
 pub mod config;
 pub mod errors;
 pub mod registry;
