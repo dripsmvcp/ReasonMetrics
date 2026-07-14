@@ -33,13 +33,19 @@ export default function App() {
   // next successful analysis. The previous record/result are left in place
   // so a bad trace never blanks an already-rendered analysis.
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  // The model that produced the trace on screen, when the source knows it —
+  // only live mode does. Pasted/gallery/share-link traces carry no model, so
+  // this clears on every analysis that doesn't supply one; ShareBar uses it
+  // to name exports.
+  const [sourceModel, setSourceModel] = useState<string | undefined>(undefined);
   const detailRef = useRef<HTMLDivElement>(null);
 
-  const renderAnalysis = useCallback((rec: TraceInput) => {
+  const renderAnalysis = useCallback((rec: TraceInput, model?: string) => {
     try {
       const analyzed = analyzeTrace(rec);
       setRecord(rec);
       setResult(analyzed);
+      setSourceModel(model);
       setAnalysisError(null);
       setGeneration((n) => n + 1);
     } catch (err) {
@@ -54,8 +60,8 @@ export default function App() {
   // of `onAnalyze`, so a freshly-loaded share link keeps its hash and stays
   // shareable; "copy share link" sets the hash afterward as it always has.
   const onAnalyze = useCallback(
-    (rec: TraceInput) => {
-      renderAnalysis(rec);
+    (rec: TraceInput, model?: string) => {
+      renderAnalysis(rec, model);
       if (location.hash.startsWith("#t=")) {
         history.replaceState(null, "", location.pathname + location.search);
       }
@@ -96,7 +102,12 @@ export default function App() {
       {analysisError && <p className="analysis-error">{`analysis failed: ${analysisError}`}</p>}
       <div id="share-bar-container" hidden={!result}>
         {record && result && (
-          <ShareBar trace={record} result={result} captureTargetRef={detailRef} />
+          <ShareBar
+            trace={record}
+            result={result}
+            model={sourceModel}
+            captureTargetRef={detailRef}
+          />
         )}
       </div>
       <div id="detail" ref={detailRef}>

@@ -275,16 +275,18 @@ describe("LivePanel: streaming", () => {
     fireEvent.click(startButton);
 
     await vi.waitFor(() => expect(onAnalyze).toHaveBeenCalledTimes(2));
-    expect(onAnalyze).toHaveBeenNthCalledWith(1, {
-      problem: "2+2?",
-      thinking: "reasoning so far",
-      answer: "",
-    });
-    expect(onAnalyze).toHaveBeenNthCalledWith(2, {
-      problem: "2+2?",
-      thinking: "reasoning so far",
-      answer: "final answer",
-    });
+    // The model rides along with every tick: live is the only source that
+    // knows it, and exports are named after it.
+    expect(onAnalyze).toHaveBeenNthCalledWith(
+      1,
+      { problem: "2+2?", thinking: "reasoning so far", answer: "" },
+      "llama3",
+    );
+    expect(onAnalyze).toHaveBeenNthCalledWith(
+      2,
+      { problem: "2+2?", thinking: "reasoning so far", answer: "final answer" },
+      "llama3",
+    );
     expect(captured?.model).toBe("llama3");
     expect(captured?.baseUrl).toBe("http://localhost:11434");
   });
@@ -303,11 +305,11 @@ describe("LivePanel: streaming", () => {
     fireEvent.click(startButton);
 
     await vi.waitFor(() => expect(onAnalyze).toHaveBeenCalledTimes(2));
-    expect(onAnalyze).toHaveBeenNthCalledWith(2, {
-      problem: "hi",
-      thinking: "partial answer",
-      answer: "",
-    });
+    expect(onAnalyze).toHaveBeenNthCalledWith(
+      2,
+      { problem: "hi", thinking: "partial answer", answer: "" },
+      "llama3",
+    );
   });
 
   it("swaps Start to Stop while streaming and back to Start when done", async () => {
@@ -470,11 +472,11 @@ describe("LivePanel: compare mode", () => {
 
     fireEvent.click(container.querySelector<HTMLButtonElement>("button.live-open-b")!);
     expect(onAnalyze).toHaveBeenCalledTimes(1);
-    expect(onAnalyze).toHaveBeenCalledWith({
-      problem: "2+2?",
-      thinking: "thoughts:tinyllama",
-      answer: "ans",
-    });
+    // That side's own model, not the panel's primary selection.
+    expect(onAnalyze).toHaveBeenCalledWith(
+      { problem: "2+2?", thinking: "thoughts:tinyllama", answer: "ans" },
+      "tinyllama",
+    );
   });
 
   it("streams the two models one at a time, never concurrently", async () => {

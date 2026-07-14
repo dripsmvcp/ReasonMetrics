@@ -57,13 +57,24 @@ function randomAscii(length: number): string {
   return out;
 }
 
-function setup(trace: TraceInput, result: AnalysisResult, capture: (node: HTMLElement) => Promise<string>) {
+function setup(
+  trace: TraceInput,
+  result: AnalysisResult,
+  capture: (node: HTMLElement) => Promise<string>,
+  model?: string,
+) {
   const captureTargetRef = createRef<HTMLElement | null>();
   (captureTargetRef as { current: HTMLElement | null }).current = document.createElement("div");
   captureTargetRef.current!.className = "anatomy";
 
   const { container } = render(
-    <ShareBar captureTargetRef={captureTargetRef} trace={trace} result={result} capture={capture} />,
+    <ShareBar
+      captureTargetRef={captureTargetRef}
+      trace={trace}
+      result={result}
+      capture={capture}
+      model={model}
+    />,
   );
   return {
     container,
@@ -124,6 +135,19 @@ describe("ShareBar: export png", () => {
     const anchor = clickedAnchors[0];
     expect(anchor.href).toBe("data:image/png;base64,stub");
     expect(anchor.download).toBe("reasonmetrics-trace-7-82.6.png");
+  });
+
+  it("names the export after the model when one is known (live mode)", async () => {
+    const capture = vi.fn(async () => "data:image/png;base64,stub");
+    const trace: TraceInput = { id: "live", problem: "p", thinking: "t", answer: "a" };
+    const { exportButton } = setup(trace, makeResult(82.567), capture, "qwen3:1.7b");
+
+    fireEvent.click(exportButton);
+    await vi.waitFor(() => expect(clickedAnchors).toHaveLength(1));
+
+    // The model wins over the trace id — that is the whole point of the
+    // `model` branch in exportFilename, which no caller reached before.
+    expect(clickedAnchors[0].download).toBe("reasonmetrics-qwen3-1.7b-82.6.png");
   });
 
   it("shows a failure status and still removes the footer when capture rejects", async () => {

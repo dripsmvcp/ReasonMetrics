@@ -60,7 +60,9 @@ function linkedController(parent: AbortSignal): AbortController {
 }
 
 interface LivePanelProps {
-  onAnalyze: (record: TraceInput) => void;
+  /** The model is passed alongside the trace: live is the only source that
+   * knows which model produced it, and exports are named after it. */
+  onAnalyze: (record: TraceInput, model?: string) => void;
   /** True while the Live tab is the active mode. Drives the one-time
    * model-list fetch on first activation — never at mount, and never more
    * than once for the component's lifetime — matching the "no network
@@ -170,20 +172,22 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
     controllerRef.current = controller;
     setStreaming(true);
 
-    const analyzeThrottled = throttle(onAnalyze, THROTTLE_MS);
+    const model = selectedModelRef.current;
+    const analyze = (rec: TraceInput) => onAnalyze(rec, model);
+    const analyzeThrottled = throttle(analyze, THROTTLE_MS);
     activeThrottlesRef.current = [analyzeThrottled];
     const currentPrompt = prompt;
 
     try {
       await streamChat({
         baseUrl: baseUrlRef.current,
-        model: selectedModelRef.current,
+        model,
         prompt: currentPrompt,
         signal: controller.signal,
         onDelta: (delta) => analyzeThrottled(toTraceInput(currentPrompt, delta)),
         onDone: (final) => {
           analyzeThrottled.cancel();
-          onAnalyze(toTraceInput(currentPrompt, final));
+          analyze(toTraceInput(currentPrompt, final));
         },
       });
     } catch (err) {
@@ -436,7 +440,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
               type="button"
               className="live-open-a"
               disabled={!resultA}
-              onClick={() => recordARef.current && onAnalyze(recordARef.current)}
+              onClick={() => recordARef.current && onAnalyze(recordARef.current, selectedModel)}
             >
               {`Open ${selectedModel || "A"} in detail`}
             </button>
@@ -444,7 +448,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
               type="button"
               className="live-open-b"
               disabled={!resultB}
-              onClick={() => recordBRef.current && onAnalyze(recordBRef.current)}
+              onClick={() => recordBRef.current && onAnalyze(recordBRef.current, modelB)}
             >
               {`Open ${modelB || "B"} in detail`}
             </button>
