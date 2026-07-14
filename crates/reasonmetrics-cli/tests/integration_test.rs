@@ -73,6 +73,177 @@ fn test_filter_command() {
     );
 }
 
+/// Build a corpus of `n` traces that score differently, so a rank-based filter
+/// has something to rank. Varying the number of verification phrases moves
+/// several dimensions at once (verification up, but repetition down once the
+/// phrase recurs), so the resulting order is deliberately NOT assumed here —
+/// the tests below read the real scores instead of trusting an intuition.
+fn setup_ranked_corpus(n: usize) -> (TempDir, std::path::PathBuf) {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("ranked.jsonl");
+    let mut file = std::fs::File::create(&path).unwrap();
+
+    for i in 0..n {
+        let verifications = "Let me verify this. Checking the result confirms it. ".repeat(i);
+        let thinking = format!(
+            "Step 1: set up the equation.\n\nStep 2: solve it.\n\n{verifications}So x = {i}."
+        );
+        writeln!(
+            file,
+            r#"{{"id":"t{i}","problem":"Solve for x","thinking":{},"answer":"x = {i}"}}"#,
+            serde_json::to_string(&thinking).unwrap()
+        )
+        .unwrap();
+    }
+    (dir, path)
+}
+
+/// Score `input` and return (id, quality_score) for every trace.
+fn score_corpus(dir: &TempDir, input: &std::path::Path) -> Vec<(String, f64)> {
+    let scored = dir.path().join("scored.jsonl");
+    Command::cargo_bin("reasonmetrics")
+        .unwrap()
+        .args([
+            "score",
+            "--config",
+            dir.path().join("nonexistent.toml").to_str().unwrap(),
+            "-i",
+            input.to_str().unwrap(),
+            "-o",
+            scored.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    std::fs::read_to_string(&scored)
+        .unwrap()
+        .lines()
+        .map(|l| {
+            let v: serde_json::Value = serde_json::from_str(l).unwrap();
+            (
+                v["id"].as_str().unwrap().to_string(),
+                v["quality_score"].as_f64().unwrap(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn test_filter_top_percent_keeps_exactly_that_share() {
+    let (dir, input) = setup_ranked_corpus(20);
+    let output = dir.path().join("top.jsonl");
+
+    Command::cargo_bin("reasonmetrics")
+        .unwrap()
+        .args([
+            "filter",
+            "--config",
+            dir.path().join("nonexistent.toml").to_str().unwrap(),
+            "-i",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--top-percent",
+            "30",
+        ])
+        .assert()
+        .success();
+
+    let content = std::fs::read_to_string(&output).unwrap();
+    // The point of --top-percent over --min-score: the output size is exact.
+    assert_eq!(
+        content.lines().count(),
+        6,
+        "top 30% of 20 traces must be exactly 6, got {}",
+        content.lines().count()
+    );
+}
+
+#[test]
+fn test_filter_top_percent_keeps_the_best_traces() {
+    let (dir, input) = setup_ranked_corpus(10);
+    let output = dir.path().join("top.jsonl");
+
+    let mut scores = score_corpus(&dir, &input);
+    scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap().then_with(|| a.0.cmp(&b.0)));
+
+    Command::cargo_bin("reasonmetrics")
+        .unwrap()
+        .args([
+            "filter",
+            "--config",
+            dir.path().join("nonexistent.toml").to_str().unwrap(),
+            "-i",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--top-percent",
+            "20",
+        ])
+        .assert()
+        .success();
+
+    let kept: Vec<String> = std::fs::read_to_string(&output)
+        .unwrap()
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<serde_json::Value>(l).unwrap()["id"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        })
+        .collect();
+
+    // The contract of a rank filter: it keeps the highest-scoring traces — not
+    // merely the right NUMBER of them. Asserted against the scores the scorer
+    // actually produced, so this stays true if the scorer's ordering changes.
+    let mut expected: Vec<String> = scores.iter().take(2).map(|(id, _)| id.clone()).collect();
+    let mut got = kept.clone();
+    expected.sort();
+    got.sort();
+    assert_eq!(
+        got, expected,
+        "--top-percent 20 must keep the 2 highest-scoring traces of 10"
+    );
+
+    // And nothing it dropped may outrank anything it kept.
+    let worst_kept = scores
+        .iter()
+        .filter(|(id, _)| kept.contains(id))
+        .map(|(_, s)| *s)
+        .fold(f64::INFINITY, f64::min);
+    let best_dropped = scores
+        .iter()
+        .filter(|(id, _)| !kept.contains(id))
+        .map(|(_, s)| *s)
+        .fold(f64::NEG_INFINITY, f64::max);
+    assert!(
+        worst_kept >= best_dropped,
+        "a dropped trace ({best_dropped}) outranks a kept one ({worst_kept})"
+    );
+}
+
+#[test]
+fn test_filter_rejects_out_of_range_percent() {
+    let (dir, input) = setup_test_data();
+    let output = dir.path().join("clean.jsonl");
+
+    Command::cargo_bin("reasonmetrics")
+        .unwrap()
+        .args([
+            "filter",
+            "-i",
+            input.to_str().unwrap(),
+            "-o",
+            output.to_str().unwrap(),
+            "--top-percent",
+            "150",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("between 0 and 100"));
+}
+
 #[test]
 fn test_stats_command() {
     let (dir, input) = setup_test_data();

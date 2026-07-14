@@ -35,8 +35,16 @@ enum Commands {
         input: PathBuf,
         #[arg(short, long, default_value = "clean.jsonl")]
         output: PathBuf,
+        /// Keep traces scoring at least N, where the score is a percentile
+        /// against a reference corpus of real traces: 70 = "better than 70% of
+        /// real reasoning traces". Absolute, so it works on a single trace.
         #[arg(long)]
         min_score: Option<f32>,
+        /// Keep the best N% of THIS input file (e.g. 30 keeps the top 30%).
+        /// Unlike --min-score, guarantees exactly how many traces survive —
+        /// use it when the output size has to be fixed. Overrides --min-score.
+        #[arg(long, value_parser = parse_percent)]
+        top_percent: Option<f32>,
         #[arg(long)]
         min_efficiency: Option<f32>,
         #[arg(long)]
@@ -86,6 +94,7 @@ fn main() -> anyhow::Result<()> {
             input,
             output,
             min_score,
+            top_percent,
             min_efficiency,
             min_language,
         } => {
@@ -95,6 +104,7 @@ fn main() -> anyhow::Result<()> {
                 &output,
                 &config,
                 min_score,
+                top_percent,
                 min_efficiency,
                 min_language,
             )?
@@ -150,11 +160,21 @@ fn cmd_score(input: &Path, output: Option<&Path>, config: &Config) -> anyhow::Re
     Ok(())
 }
 
+/// `--top-percent` takes a percentage: 0 keeps nothing, 100 keeps everything.
+fn parse_percent(s: &str) -> Result<f32, String> {
+    let v: f32 = s.parse().map_err(|_| format!("`{s}` is not a number"))?;
+    if !(0.0..=100.0).contains(&v) {
+        return Err(format!("must be between 0 and 100, got {v}"));
+    }
+    Ok(v)
+}
+
 fn cmd_filter(
     input: &Path,
     output: &Path,
     config: &Config,
     min_score: Option<f32>,
+    top_percent: Option<f32>,
     min_efficiency: Option<f32>,
     min_language: Option<f32>,
 ) -> anyhow::Result<()> {
@@ -162,18 +182,51 @@ fn cmd_filter(
     eprintln!("Loaded {} traces", traces.len());
 
     let scored = score_traces(&traces, &config.scoring);
-    let min_score = min_score.unwrap_or(config.output.min_score);
 
-    let filtered: Vec<_> = scored
-        .iter()
-        .zip(traces.iter())
-        .filter(|(s, _)| {
-            s.quality_score >= min_score
-                && min_efficiency.map_or(true, |m| s.efficiency_score >= m)
-                && min_language.map_or(true, |m| s.language_score >= m)
-        })
-        .map(|(_, trace)| trace.clone())
-        .collect();
+    // The dimension gates apply in both modes; only the quality cut differs.
+    let passes_gates = |s: &reasonmetrics_core::trace::ScoredTrace| {
+        min_efficiency.map_or(true, |m| s.efficiency_score >= m)
+            && min_language.map_or(true, |m| s.language_score >= m)
+    };
+
+    let filtered: Vec<_> = match top_percent {
+        // Rank-relative: keep the best N% OF THIS FILE. Exact output size, which
+        // an absolute threshold cannot promise.
+        Some(pct) => {
+            let mut ranked: Vec<_> = scored
+                .iter()
+                .zip(traces.iter())
+                .filter(|(s, _)| passes_gates(s))
+                .collect();
+            // Descending by score; ties broken by id so the output is deterministic.
+            ranked.sort_by(|a, b| {
+                b.0.quality_score
+                    .partial_cmp(&a.0.quality_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| a.0.id.cmp(&b.0.id))
+            });
+            let keep = ((ranked.len() as f32) * pct / 100.0).round() as usize;
+            eprintln!(
+                "Keeping the top {pct}% of {} traces by score ({keep} traces)",
+                ranked.len()
+            );
+            ranked
+                .into_iter()
+                .take(keep)
+                .map(|(_, trace)| trace.clone())
+                .collect()
+        }
+        // Absolute: "better than N% of real reference traces".
+        None => {
+            let min_score = min_score.unwrap_or(config.output.min_score);
+            scored
+                .iter()
+                .zip(traces.iter())
+                .filter(|(s, _)| s.quality_score >= min_score && passes_gates(s))
+                .map(|(_, trace)| trace.clone())
+                .collect()
+        }
+    };
 
     let removed = traces.len() - filtered.len();
     eprintln!(
@@ -260,7 +313,19 @@ reasonmetrics quality dimensions
    Requires: expected_answer (aliases: ground_truth, label, target) on the trace.
    Based on: LLMThinkBench Overthinking Score (2507.04023, ACL 2026 Findings)
 
-COMPOSITE SCORE = weighted sum of all 9 dimensions (0-100).
+RAW SCORE      = weighted sum of all 9 dimensions (0-100).
+QUALITY SCORE  = that raw score's PERCENTILE against a reference corpus of 2,517
+                 real reasoning traces — "better than N% of real traces".
+
+  Both are reported. Filter and rank on quality_score: the raw scale is crushed
+  (99.9% of real traces score above 70), so an absolute cut on it keeps almost
+  everything. The mapping is monotone, so it never reorders traces.
+
+  `filter --min-score 70`   keeps traces better than 70% of the reference corpus.
+  `filter --top-percent 30` keeps the best 30% of YOUR file, whatever it contains.
+
+  Because it is a percentile, a very short trace scores near zero — correctly: it
+  contains little reasoning. See docs/CALIBRATION.md.
 "#
     );
 }
