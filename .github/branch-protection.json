@@ -1,0 +1,26 @@
+{
+  "_comment": "Branch protection for main. GitHub rejects this with 403 on a PRIVATE repo without Pro, so it can only be applied once the repo is public. Apply with: gh api -X PUT repos/dripsmvcp/ReasonMetrics/branches/main/protection --input .github/branch-protection.json  (verify with: gh api repos/dripsmvcp/ReasonMetrics/branches/main/protection --jq '.required_status_checks.contexts')",
+  "_contexts_note": "Context strings are the JOB names as CI reports them, not the workflow names. 'guard' is path-guard.yml's job id (it has no display name). path-guard skips for dripsmvcp; a skipped job still reports, so it does not deadlock maintainer PRs.",
+  "_enforce_admins_note": "false on purpose: solo maintainer still pushes directly to main while working alone. Flip to true when a second maintainer exists.",
+  "required_status_checks": {
+    "strict": false,
+    "contexts": [
+      "Test & Lint",
+      "Core compiles for wasm32",
+      "wasm-pack build & node tests",
+      "Web app tests & build",
+      "guard"
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_linear_history": true,
+  "required_conversation_resolution": true
+}

@@ -12,12 +12,12 @@ from a committed command line.
 - Python bindings: `score`, parallel `score_many`, `annotate`, config overrides
 - Model-family registry: fixture-gated TOML entries (`reasonmetrics models`)
 - Adversarial limitations suite: documented, CI-pinned failure modes — [docs/LIMITATIONS.md](docs/LIMITATIONS.md)
+- Calibration study: per-dimension rank correlation against LLM-judge labels,
+  including the dimensions that came out **badly** — [docs/CALIBRATION.md](docs/CALIBRATION.md).
+  This is now the evidence bar any scorer or weight change has to clear.
 
 ## Now
 
-- **Calibration study** — per-dimension correlation against LLM-judge labels on
-  the validated datasets → `docs/CALIBRATION.md`. Also becomes the evidence bar
-  for any scorer/weight change.
 - **Filtering validation** — does score-filtering actually improve a fine-tune?
   Pre-registered three-arm experiment (unfiltered / score-filtered / random-drop),
   published whichever way it comes out → `docs/VALIDATION.md`.
