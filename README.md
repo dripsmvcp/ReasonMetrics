@@ -100,10 +100,14 @@ Every command takes `--config <file>` (default: `reasonmetrics.toml` in the curr
 
 ## Python
 
-The same engine as a Python package (built with PyO3; releases the GIL and scores batches in parallel):
+The same engine as a Python package (built with PyO3; releases the GIL and scores batches in parallel).
+
+> **Not on PyPI yet** — the first release is still pending, so `pip install reasonmetrics` will not find
+> anything. Install from source in the meantime: pip builds the extension for you, so you need a
+> [Rust toolchain](https://rustup.rs) but nothing else.
 
 ```bash
-pip install reasonmetrics
+pip install "git+https://github.com/dripsmvcp/ReasonMetrics.git#subdirectory=crates/reasonmetrics-py"
 ```
 
 ```python
