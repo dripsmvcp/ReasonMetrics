@@ -2,7 +2,7 @@
 strict = false
 
 [scoring.weights]
-efficiency = 0.20
+efficiency = 0.99
 language = 0.12
 alignment = 0.18
 structure = 0.10
