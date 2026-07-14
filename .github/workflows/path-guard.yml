@@ -12,9 +12,10 @@ permissions:
 
 jobs:
   guard:
-    # TEMPORARY (revert to `!=`): inverted so the guard actually RUNS on the
-    # maintainer's own PRs, to verify it works. It has never executed once.
-    if: github.event.pull_request.user.login == 'dripsmvcp'
+    # Verified 2026-07-14 by temporarily inverting this to `==` and opening two
+    # real PRs: a green-zone edit passed, a [scoring.weights] edit failed with
+    # the CONTRIBUTING message and blocked the merge. Reverted here.
+    if: github.event.pull_request.user.login != 'dripsmvcp'
     runs-on: ubuntu-latest
     steps:
       - name: Check maintainer-only paths
