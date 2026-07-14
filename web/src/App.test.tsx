@@ -31,6 +31,7 @@ function fakeScored(): ScoredTrace {
     thinking: "t",
     answer: "a",
     quality_score: 10,
+    raw_score: 78,
     efficiency_score: 0,
     language_score: 0,
     answer_alignment_score: 0,

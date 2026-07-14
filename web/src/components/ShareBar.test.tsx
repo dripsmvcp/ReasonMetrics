@@ -20,6 +20,7 @@ function makeScored(): ScoredTrace {
     thinking: "t",
     answer: "a",
     quality_score: 82,
+    raw_score: 95,
     efficiency_score: 0,
     language_score: 0,
     answer_alignment_score: 0,

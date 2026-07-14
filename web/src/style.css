@@ -437,10 +437,30 @@ body {
   font-weight: 600;
 }
 
+/* The dial plus its caption. The caption is not decoration: the score is a
+   percentile, and an uncaptioned "0.6 / 100" reads as a broken tool rather than
+   as "this trace out-reasons 0.6% of real traces". See issue #30. */
+.score-block {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.score-meaning {
+  margin: 0;
+  max-width: 11rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
 .dial {
   width: 6rem;
   height: 6rem;
-  margin-left: auto;
   flex-shrink: 0;
 }
 

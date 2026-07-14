@@ -48,6 +48,7 @@ function makeScored(): ScoredTrace {
     thinking: "t",
     answer: "a",
     quality_score: 0,
+    raw_score: 60,
     efficiency_score: 0,
     language_score: 0,
     answer_alignment_score: 0,
@@ -127,6 +128,23 @@ describe("AnatomyView: header", () => {
   ])("colors the dial for composite %s with %s", (composite, cls) => {
     const container = renderAnatomy({ composite: composite as number });
     expect(container.querySelector(`.dial-arc.${cls}`)).not.toBeNull();
+  });
+
+  // The score is a percentile, not a grade. Without this caption a legitimately
+  // low number (a 2+2 trace scores ~1) reads as a broken tool rather than as
+  // "this out-reasons 1% of real traces". See issue #30.
+  it("captions the dial with what the number actually means", () => {
+    const container = renderAnatomy({ composite: 40.4 });
+    const caption = container.querySelector(".score-meaning");
+    expect(caption?.textContent).toContain("better than");
+    expect(caption?.textContent).toContain("40%");
+    expect(caption?.textContent).toContain("real reasoning traces");
+  });
+
+  it("states the percentile in the dial's accessible name", () => {
+    const container = renderAnatomy({ composite: 40.4 });
+    const label = container.querySelector("svg.dial")?.getAttribute("aria-label");
+    expect(label).toContain("better than 40% of real reasoning traces");
   });
 });
 

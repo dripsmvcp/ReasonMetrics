@@ -38,7 +38,10 @@ export interface ScoredTrace {
   problem: string;
   thinking: string;
   answer: string;
+  /** Percentile against a reference corpus of real traces (0-100), not a grade. */
   quality_score: number;
+  /** The weighted dimension average behind `quality_score`, before calibration. */
+  raw_score: number;
   efficiency_score: number;
   language_score: number;
   answer_alignment_score: number;
