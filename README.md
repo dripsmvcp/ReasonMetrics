@@ -138,6 +138,8 @@ rm.score(record, config={"weights": {"efficiency": 0.5}})   # reasonmetrics.toml
 rm.registry()                            # embedded model-family registry
 ```
 
+**Worked example:** [`examples/curate_a_reasoning_dataset.ipynb`](examples/curate_a_reasoning_dataset.ipynb) — the whole loop on a real dataset (HuggingFace → score → filter → inspect what you dropped → JSONL), including how to read the score without misreading it.
+
 ## Input Format
 
 JSONL with one trace per line:
