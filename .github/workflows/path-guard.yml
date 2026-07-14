@@ -22,7 +22,11 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           gh api "repos/$REPO/pulls/$PR/files" --paginate -q '.[].filename' > changed.txt
-          PROTECTED='^(crates/reasonmetrics-core/|crates/reasonmetrics-wasm/src/|\.github/|Cargo\.toml$|docs/launch\.md$)'
+          # reasonmetrics.toml is in here because it carries [scoring.weights]:
+          # weights are scoring semantics, and those never move without
+          # calibration evidence (docs/CALIBRATION.md). Without it, the one
+          # change the policy most wants to stop could sail through green CI.
+          PROTECTED='^(crates/reasonmetrics-core/|crates/reasonmetrics-wasm/src/|\.github/|Cargo\.toml$|reasonmetrics\.toml$|docs/launch\.md$)'
           if grep -E "$PROTECTED" changed.txt; then
             echo "::error::This PR modifies maintainer-only paths (see the Ownership zones section of CONTRIBUTING.md). Please open an issue to discuss the change instead."
             exit 1

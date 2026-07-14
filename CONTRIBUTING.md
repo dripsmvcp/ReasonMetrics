@@ -27,7 +27,7 @@ data-plus-fixture changes that CI can verify mechanically.
 ### 🔴 Red — maintainer-only (PRs closed, converted to issues)
 
 `crates/reasonmetrics-core/` · `crates/reasonmetrics-wasm/src/` · `.github/` · workspace `Cargo.toml`
-· `docs/launch.md` · releases and tags.
+· `reasonmetrics.toml` (it carries `[scoring.weights]`) · `docs/launch.md` · releases and tags.
 
 The scoring semantics are the product; external scorer or weight changes are never merged directly.
 Found a scoring problem? **File a miscalibration issue** with a repro trace — those reports are gold
