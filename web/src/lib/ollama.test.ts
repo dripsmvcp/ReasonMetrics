@@ -5,7 +5,14 @@
 // wrapping a hand-built ReadableStream.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { listModels, OllamaHttpError, streamChat, throttle, toTraceInput } from "./ollama";
+import {
+  listModels,
+  OllamaHttpError,
+  OllamaTimeoutError,
+  streamChat,
+  throttle,
+  toTraceInput,
+} from "./ollama";
 
 function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -41,7 +48,10 @@ describe("listModels", () => {
     const names = await listModels("http://localhost:11434");
 
     expect(names).toEqual(["llama3", "qwen2.5-coder:7b"]);
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:11434/api/tags");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:11434/api/tags",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("trims a trailing slash on the base URL", async () => {
@@ -49,7 +59,10 @@ describe("listModels", () => {
 
     await listModels("http://localhost:11434/");
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:11434/api/tags");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:11434/api/tags",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it("throws OllamaHttpError with the status on a non-2xx response", async () => {
@@ -66,6 +79,32 @@ describe("listModels", () => {
     vi.stubGlobal("fetch", fn);
 
     await expect(listModels("http://localhost:11434")).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it("times out a hung probe with OllamaTimeoutError", async () => {
+    vi.useFakeTimers();
+    try {
+      // A fetch that never resolves on its own — the real failure mode is a
+      // stalled private-network-access preflight. It rejects only when aborted.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          (_url: string, init: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init.signal?.addEventListener("abort", () =>
+                reject(new DOMException("aborted", "AbortError")),
+              );
+            }),
+        ),
+      );
+
+      const promise = listModels("http://localhost:11434", 10_000);
+      const assertion = expect(promise).rejects.toBeInstanceOf(OllamaTimeoutError);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -289,6 +328,64 @@ describe("streamChat: NDJSON parsing", () => {
 
     expect(onDelta).toHaveBeenCalledWith({ thinking: "", content: "a" });
     expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it("times out a hung initial response with OllamaTimeoutError", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          (_url: string, init: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init.signal?.addEventListener("abort", () =>
+                reject(new DOMException("aborted", "AbortError")),
+              );
+            }),
+        ),
+      );
+      const onDone = vi.fn();
+      const promise = streamChat({
+        baseUrl: "http://localhost:11434",
+        model: "tinyllama",
+        prompt: "p",
+        onDelta: vi.fn(),
+        onDone,
+        timeoutMs: 10_000,
+      });
+      const assertion = expect(promise).rejects.toBeInstanceOf(OllamaTimeoutError);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await assertion;
+      expect(onDone).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets a caller abort win over the timeout (stays an AbortError)", async () => {
+    const caller = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            );
+          }),
+      ),
+    );
+    const promise = streamChat({
+      baseUrl: "http://localhost:11434",
+      model: "tinyllama",
+      prompt: "p",
+      onDelta: vi.fn(),
+      onDone: vi.fn(),
+      signal: caller.signal,
+      timeoutMs: 10_000,
+    });
+    caller.abort();
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("throws OllamaHttpError with the status on a non-2xx response", async () => {

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   listModels,
   OllamaHttpError,
+  OllamaTimeoutError,
   streamChat,
   throttle,
   toTraceInput,
@@ -81,6 +82,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
   const [selectedModel, setSelectedModel] = useState("");
   const [prompt, setPrompt] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [probing, setProbing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [modelB, setModelB] = useState("");
@@ -109,9 +111,16 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
   function showConnectionError(err: unknown): void {
     if (err instanceof OllamaHttpError) {
       setError(`Ollama returned an error: HTTP ${err.status}`);
-    } else if (err instanceof TypeError) {
+    } else if (err instanceof OllamaTimeoutError || err instanceof TypeError) {
+      // A timeout here is almost always the same underlying cause as an outright
+      // connection failure (a stalled cross-origin / private-network preflight),
+      // so it gets the same actionable guidance, noting it timed out.
+      const timedOut =
+        err instanceof OllamaTimeoutError
+          ? ` (timed out after ${Math.round(err.timeoutMs / 1000)}s)`
+          : "";
       setError(
-        `Could not reach Ollama at ${baseUrlRef.current}. ` +
+        `Could not reach Ollama at ${baseUrlRef.current}${timedOut}. ` +
           `Ollama blocks cross-origin requests by default — ` +
           `run OLLAMA_ORIGINS=${location.origin} ollama serve`,
       );
@@ -122,6 +131,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
 
   async function refreshModels(): Promise<void> {
     setError(null);
+    setProbing(true);
     try {
       const list = await listModels(baseUrlRef.current);
       const savedModel = readStorage(STORAGE_MODEL);
@@ -133,6 +143,8 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
       );
     } catch (err) {
       showConnectionError(err);
+    } finally {
+      setProbing(false);
     }
   }
 
@@ -373,6 +385,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
         <select
           className="live-model"
           value={selectedModel}
+          disabled={probing}
           onChange={(event) => handleModelChange(event.target.value)}
         >
           {models.map((name) => (
@@ -386,6 +399,7 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
           <select
             className="live-model-b"
             value={modelB}
+            disabled={probing}
             onChange={(event) => handleModelBChange(event.target.value)}
           >
             {models.map((name) => (
@@ -396,7 +410,12 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
           </select>
         )}
 
-        <button type="button" className="live-refresh" onClick={() => void refreshModels()}>
+        <button
+          type="button"
+          className="live-refresh"
+          disabled={probing}
+          onClick={() => void refreshModels()}
+        >
           Refresh models
         </button>
 
@@ -421,6 +440,10 @@ export function LivePanel({ onAnalyze, active }: LivePanelProps) {
       <button type="button" className="live-start" onClick={handleStartStopClick}>
         {streaming ? "Stop" : "Start"}
       </button>
+
+      <p className="live-probing" role="status" hidden={!probing}>
+        {probing ? `Checking for Ollama at ${baseUrl}…` : ""}
+      </p>
 
       <p className="live-error" hidden={!error}>
         {error ?? ""}

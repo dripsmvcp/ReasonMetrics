@@ -10,7 +10,7 @@
 
 import { fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OllamaHttpError } from "../lib/ollama";
+import { OllamaHttpError, OllamaTimeoutError } from "../lib/ollama";
 import type { TraceInput } from "../lib/types";
 import { COMPARE_STALL_MS, LivePanel } from "./LivePanel";
 
@@ -135,6 +135,46 @@ describe("LivePanel: settings", () => {
     await vi.waitFor(() => expect(modelSelect.children).toHaveLength(2));
 
     expect(modelSelect.value).toBe("llama3");
+  });
+});
+
+// #26: while the /api/tags probe is in flight the panel must not sit silently
+// empty — it shows a pending state, and a timed-out probe reaches a visible
+// error instead of hanging forever.
+describe("LivePanel: probe state (#26)", () => {
+  it("shows a checking message and disables the select while the probe is in flight", async () => {
+    let resolveList!: (v: string[]) => void;
+    listModelsMock.mockReturnValue(
+      new Promise<string[]>((resolve) => {
+        resolveList = resolve;
+      }),
+    );
+
+    const { container, activate, modelSelect, refreshButton } = setup();
+    activate();
+
+    const probing = () => container.querySelector<HTMLParagraphElement>("p.live-probing")!;
+    await vi.waitFor(() => expect(probing().hidden).toBe(false));
+    expect(probing().textContent).toContain("Checking for Ollama at http://localhost:11434");
+    expect(modelSelect.disabled).toBe(true);
+    expect(refreshButton.disabled).toBe(true);
+
+    resolveList(["llama3", "tinyllama"]);
+    await vi.waitFor(() => expect(probing().hidden).toBe(true));
+    expect(modelSelect.disabled).toBe(false);
+    expect(refreshButton.disabled).toBe(false);
+  });
+
+  it("surfaces the connection error and clears probing when the probe times out", async () => {
+    listModelsMock.mockRejectedValue(new OllamaTimeoutError("http://localhost:11434", 10_000));
+
+    const { container, activate, errorArea } = setup();
+    activate();
+
+    await vi.waitFor(() => expect(errorArea.hidden).toBe(false));
+    expect(errorArea.textContent).toContain("timed out after 10s");
+    expect(errorArea.textContent).toContain("OLLAMA_ORIGINS");
+    expect(container.querySelector<HTMLParagraphElement>("p.live-probing")!.hidden).toBe(true);
   });
 });
 

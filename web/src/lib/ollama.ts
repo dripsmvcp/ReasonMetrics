@@ -1,10 +1,16 @@
 // Pure Ollama HTTP client: no DOM. Lists local models, streams a chat
 // completion parsing Ollama's newline-delimited JSON, and exposes a small
 // leading+trailing throttle helper used to cap how often the live view
-// re-runs analyzeTrace while tokens are arriving. web/src/ui/livePanel.ts
+// re-runs analyzeTrace while tokens are arriving. web/src/components/LivePanel.tsx
 // wires this into the DOM; this file only knows fetch/streams/JSON.
 
 import type { TraceInput } from "./types";
+
+/** Default cap on how long a probe / initial response may hang. `fetch` never
+ * times out on its own, and a public→localhost request can stall for over a
+ * minute on a private-network-access preflight — so without this the Live tab
+ * can sit silently forever. 10s is generous for a local daemon. */
+export const DEFAULT_PROBE_TIMEOUT_MS = 10_000;
 
 /** Thrown when Ollama responds with a non-2xx status. Network/CORS failures
  * surface as the fetch-native `TypeError` instead, so callers can tell the
@@ -16,6 +22,47 @@ export class OllamaHttpError extends Error {
     super(message);
     this.name = "OllamaHttpError";
     this.status = status;
+  }
+}
+
+/** Thrown when a request outlives its timeout. Distinct from a user-initiated
+ * abort (which stays an `AbortError`) so callers can show a connection error
+ * instead of silently treating the timeout as a deliberate stop. */
+export class OllamaTimeoutError extends Error {
+  readonly baseUrl: string;
+  readonly timeoutMs: number;
+
+  constructor(baseUrl: string, timeoutMs: number) {
+    super(`Ollama at ${baseUrl} did not respond within ${timeoutMs}ms`);
+    this.name = "OllamaTimeoutError";
+    this.baseUrl = baseUrl;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+/** `fetch` with a timeout that aborts the request and reports it as an
+ * `OllamaTimeoutError`. Timer-based (not `AbortSignal.timeout`) so tests can
+ * drive it with fake timers. For one-shot requests only — a streaming body
+ * outlives this, so `streamChat` handles its own timeout inline. */
+async function fetchWithTimeout(
+  url: string,
+  baseUrl: string,
+  timeoutMs: number,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (timedOut) throw new OllamaTimeoutError(baseUrl, timeoutMs);
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -34,6 +81,10 @@ export interface StreamChatOptions {
   /** Fires once, after the `done:true` line, with the final totals. */
   onDone: (final: OllamaDelta) => void;
   signal?: AbortSignal;
+  /** Caps the wait for the INITIAL response only (headers arriving). Once the
+   * stream is flowing, silence is the caller's to bound — the timer is cleared
+   * as soon as the response starts. Defaults to {@link DEFAULT_PROBE_TIMEOUT_MS}. */
+  timeoutMs?: number;
 }
 
 interface OllamaChatLine {
@@ -45,9 +96,13 @@ function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, "")}${path}`;
 }
 
-/** List locally available model names via `GET /api/tags`. */
-export async function listModels(baseUrl: string): Promise<string[]> {
-  const res = await fetch(joinUrl(baseUrl, "/api/tags"));
+/** List locally available model names via `GET /api/tags`. Bounded by
+ * `timeoutMs` so a stalled probe surfaces an error instead of hanging. */
+export async function listModels(
+  baseUrl: string,
+  timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS,
+): Promise<string[]> {
+  const res = await fetchWithTimeout(joinUrl(baseUrl, "/api/tags"), baseUrl, timeoutMs);
   if (!res.ok) {
     throw new OllamaHttpError(res.status, `GET /api/tags failed with status ${res.status}`);
   }
@@ -69,22 +124,58 @@ export async function listModels(baseUrl: string): Promise<string[]> {
  */
 export async function streamChat(opts: StreamChatOptions): Promise<void> {
   const { baseUrl, model, prompt, onDelta, onDone, signal } = opts;
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
 
-  const res = await fetch(joinUrl(baseUrl, "/api/chat"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-      stream: true,
-    }),
-    signal,
-  });
+  // One controller aborts the whole stream on either the caller's signal OR the
+  // initial-response timeout. The caller link must outlive the timeout (a Stop
+  // mid-stream still has to abort), so it is not `once` and is torn down in the
+  // final `finally`; the timer is cleared the moment headers arrive.
+  const controller = new AbortController();
+  let timedOut = false;
+  const onCallerAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", onCallerAbort);
+  }
+  let timer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const clearInitialTimeout = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(joinUrl(baseUrl, "/api/chat"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        stream: true,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearInitialTimeout();
+    if (signal) signal.removeEventListener("abort", onCallerAbort);
+    if (timedOut) throw new OllamaTimeoutError(baseUrl, timeoutMs);
+    throw err;
+  }
+  // Headers are in; the stream body is now the caller's to bound (compare mode
+  // arms a per-byte stall timer), so the initial-response timeout is done.
+  clearInitialTimeout();
 
   if (!res.ok) {
+    if (signal) signal.removeEventListener("abort", onCallerAbort);
     throw new OllamaHttpError(res.status, `POST /api/chat failed with status ${res.status}`);
   }
   if (!res.body) {
+    if (signal) signal.removeEventListener("abort", onCallerAbort);
     throw new Error("Ollama response has no body");
   }
 
@@ -145,6 +236,9 @@ export async function streamChat(opts: StreamChatOptions): Promise<void> {
       onDone({ ...totals });
     }
   } finally {
+    // The caller link is live for the whole stream (so a mid-stream Stop
+    // aborts it); tear it down now that the stream is over.
+    if (signal) signal.removeEventListener("abort", onCallerAbort);
     // Cancel before releasing so an error/abort path doesn't leave the
     // HTTP body streaming in the background; a rejection here (e.g. the
     // stream already errored from an abort) is expected and swallowed —

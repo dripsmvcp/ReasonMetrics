@@ -100,6 +100,15 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* Pending state while the /api/tags probe is in flight (#26): a stalled
+   cross-origin preflight can hang for over a minute, and an empty, silent
+   model picker reads as a broken app. */
+.live-probing {
+  font-size: 0.85em;
+  opacity: 0.7;
+  overflow-wrap: anywhere;
+}
+
 .live-compare-toggle {
   display: flex;
   align-items: center;
