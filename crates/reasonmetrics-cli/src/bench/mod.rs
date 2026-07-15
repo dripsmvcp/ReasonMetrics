@@ -1,6 +1,7 @@
 //! `reasonmetrics bench` — run a fixed task set against an OpenAI-compatible
 //! endpoint and score the returned traces. Feature-gated (`bench`).
 
+pub mod aggregate;
 pub mod model;
 pub mod score;
 pub mod taskset;
