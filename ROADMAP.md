@@ -25,6 +25,18 @@ from a committed command line.
   the exact command and task-set hash embedded so a leaderboard row is a
   reviewable PR. Feature-gated so the curation binary stays lean —
   [docs/BENCH.md](docs/BENCH.md).
+- [x] Benchmark depth: a 100-task `overthinking-v2` set (deterministic generator),
+  multi-sample **pass@k**, and cross-run **leaderboard assembly**
+  (`reasonmetrics leaderboard`) that dedups and groups committed result JSONs —
+  [docs/BENCH.md](docs/BENCH.md).
+- [x] Leaderboard site + submission shape: `--site` renders a self-contained
+  static [leaderboard/](leaderboard) page; a leaderboard entry is a PR adding a
+  result JSON, gated by `--strict` validation in CI (a bundled task set must
+  carry its frozen sha256) — [results/README.md](results/README.md).
+- [x] Tiered LLM judge: opt-in, escalates only the uncertain heuristic band
+  (default 40–70) to a judge model; advisory, never blended into the score.
+- [x] [SPEC.md](SPEC.md) v1.0.0 — trace schema and scoring semantics, frozen and
+  semver'd, with a CI guard tying the default weights to the spec version.
 
 ## Now
 
@@ -41,17 +53,14 @@ from a committed command line.
 
 ## Next
 
-- [ ] **Benchmark task sets** — grow beyond the initial 12-problem, hand-authored
-  `overthinking-v1` to larger, license-cleared reasoning sets; add multi-sample
-  pass@k and cross-run leaderboard assembly (combine committed result JSONs into
-  one table). These feed the public leaderboard below. Design for the harness
-  they run on: [docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md](docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md).
-- [ ] **Public overthinking leaderboard** — per model: reasoning-quality score,
-  accuracy, tokens per correct answer, and cost per 1,000 correct answers for
-  notable model releases; every entry a committed JSON + the exact command that
-  produced it, so third-party submissions are reviewable PRs.
-- [ ] **SPEC.md v1** — the trace schema and scoring semantics, frozen and semver'd,
-  so other tools can implement compatibly.
+- [ ] **Populate the leaderboard** — the harness, the site, and the submission
+  gate all ship (above); what remains is operational: run notable model releases
+  on `overthinking-v2`, commit the result JSONs, and keep the page current. The
+  machinery is done; the entries accrue over time.
+- [ ] **Larger, licensed task sets** — grow beyond `overthinking-v2` (100 tasks)
+  to bigger, more varied reasoning sets, and richer answer extraction so verbose
+  answers grade correctly. Design context:
+  [docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md](docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md).
 
 ## Later
 
