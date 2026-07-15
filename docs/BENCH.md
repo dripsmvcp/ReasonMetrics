@@ -53,6 +53,16 @@ from it. Every answer is a single integer or word so grading needs no parser.
 `n_attempted`, `n_scored`, and `n_errored` are all reported: an errored task is
 never silently dropped from the denominator.
 
+## Multiple samples (pass@k)
+
+`--samples k` draws `k` completions per task. A task counts as solved if **any**
+of its `k` samples is correct, so `accuracy` becomes **pass@k** — read
+`sampling.samples` in the result to know `k`. Quality is averaged over a task's
+samples; token cost sums **all** samples, so a model that only lands the answer
+after several tries pays for every draw in tokens/correct. Set `--temperature`
+above 0, or the `k` draws are identical and pass@k collapses to pass@1 (the tool
+warns when you don't).
+
 ## Reproducibility & caveats
 
 Each run writes a result JSON embedding the exact command, the task-set sha256,

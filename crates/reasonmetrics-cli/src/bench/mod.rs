@@ -47,6 +47,8 @@ pub struct BenchArgs {
     pub out: Option<PathBuf>,
     pub format: LeaderboardFormat,
     pub retries: usize,
+    /// Draws per task. >1 turns accuracy into pass@k (any correct sample solves).
+    pub samples: usize,
 }
 
 pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {
@@ -57,6 +59,14 @@ pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {
         task_set.tasks.len(),
         &task_set.sha256[..task_set.sha256.len().min(8)]
     );
+
+    let samples = args.samples.max(1);
+    if samples > 1 && args.temperature == 0.0 {
+        eprintln!(
+            "Warning: --samples {samples} with --temperature 0 draws {samples} identical \
+             completions; pass@k is only meaningful above temperature 0."
+        );
+    }
 
     let api_key = match &args.api_key_env {
         Some(var) => Some(
@@ -74,7 +84,13 @@ pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {
         args.max_tokens,
     );
 
-    let attempts = runner::run_tasks(&http, &task_set.tasks, args.concurrency, args.retries);
+    let attempts = runner::run_tasks(
+        &http,
+        &task_set.tasks,
+        args.concurrency,
+        args.retries,
+        samples,
+    );
     let rows = score::build_rows(&attempts, scoring);
     let metrics = aggregate::aggregate(&rows, args.cost_per_mtok);
     let any_estimated = rows.iter().any(|r| r.tokens_estimated);
@@ -89,7 +105,7 @@ pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {
         ),
         args.model.clone(),
         model::host_of(&args.endpoint),
-        (args.temperature, args.max_tokens, 1),
+        (args.temperature, args.max_tokens, samples),
         any_estimated,
         metrics,
         rows,

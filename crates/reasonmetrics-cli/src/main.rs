@@ -92,6 +92,9 @@ enum Commands {
         format: String,
         #[arg(long, default_value_t = 2)]
         retries: usize,
+        /// Draws per task; >1 reports pass@k (needs temperature > 0)
+        #[arg(long, default_value_t = 1)]
+        samples: usize,
     },
 }
 
@@ -161,6 +164,7 @@ fn main() -> anyhow::Result<()> {
             out,
             format,
             retries,
+            samples,
         } => {
             let config = Config::load(&cli.config)?;
             let format = format
@@ -178,6 +182,7 @@ fn main() -> anyhow::Result<()> {
                 out,
                 format,
                 retries,
+                samples,
             };
             bench::run(args, &config.scoring)?
         }

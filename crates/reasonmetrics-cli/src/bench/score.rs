@@ -10,19 +10,29 @@ use reasonmetrics_core::trace::{estimated_token_count, extract_thinking, TraceRe
 use crate::bench::model::Completion;
 use crate::bench::taskset::Task;
 
-/// One model attempt at one task: either a completion or an error message.
-pub struct Attempt {
+/// One task's `k` sampled attempts. Each sample is a completion or an error.
+/// With `k = 1` this is a single attempt; with `k > 1` it drives pass@k.
+pub struct TaskAttempts {
     pub task: Task,
-    pub result: Result<Completion, String>,
+    pub samples: Vec<Result<Completion, String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TaskRow {
     pub id: String,
+    /// pass@k: true if *any* sample answered correctly.
     pub correct: bool,
+    /// Mean quality over the task's successful samples.
     pub quality: f32,
+    /// Total completion tokens across all of the task's samples — the real cost
+    /// of arriving at the answer, so needing many draws counts against it.
     pub tokens: usize,
     pub tokens_estimated: bool,
+    /// How many samples were drawn for this task.
+    pub samples: usize,
+    /// How many of those samples were correct.
+    pub samples_correct: usize,
+    /// Set only when *every* sample errored; the task is then excluded from scoring.
     pub error: Option<String>,
 }
 
@@ -42,15 +52,15 @@ pub fn split_completion(raw: &str) -> (String, String) {
     (thinking, answer)
 }
 
-pub fn build_rows(attempts: &[Attempt], scoring: &ScoringConfig) -> Vec<TaskRow> {
-    // Build trace records for the successful attempts, remembering their index
-    // so results can be re-interleaved with the errored ones in task order.
+pub fn build_rows(attempts: &[TaskAttempts], scoring: &ScoringConfig) -> Vec<TaskRow> {
+    // Flatten every successful sample into a trace record, remembering which
+    // task it belongs to so scored results can be regrouped per task.
     let mut records: Vec<TraceRecord> = Vec::new();
-    let mut ok_index: Vec<usize> = Vec::new();
-    let mut tokens: Vec<(usize, bool)> = Vec::new(); // (count, estimated)
+    let mut owner: Vec<usize> = Vec::new(); // task index for each record
+    let mut rec_tokens: Vec<(usize, bool)> = Vec::new(); // (count, estimated) per record
 
-    for (i, att) in attempts.iter().enumerate() {
-        if let Ok(c) = &att.result {
+    for (ti, ta) in attempts.iter().enumerate() {
+        for c in ta.samples.iter().flatten() {
             let (thinking, answer) = split_completion(&c.text);
             let (count, estimated) = match c.completion_tokens {
                 Some(n) => (n, false),
@@ -59,16 +69,16 @@ pub fn build_rows(attempts: &[Attempt], scoring: &ScoringConfig) -> Vec<TaskRow>
                     true,
                 ),
             };
-            tokens.push((count, estimated));
-            ok_index.push(i);
+            rec_tokens.push((count, estimated));
+            owner.push(ti);
             records.push(TraceRecord {
-                id: att.task.id.clone(),
-                problem: att.task.problem.clone(),
+                id: ta.task.id.clone(),
+                problem: ta.task.problem.clone(),
                 thinking,
                 answer,
                 domain: None,
                 source: None,
-                expected_answer: Some(att.task.expected_answer.clone()),
+                expected_answer: Some(ta.task.expected_answer.clone()),
                 extra: std::collections::HashMap::new(),
             });
         }
@@ -76,42 +86,60 @@ pub fn build_rows(attempts: &[Attempt], scoring: &ScoringConfig) -> Vec<TaskRow>
 
     let scored = score_traces(&records, scoring);
 
-    // Assemble rows back in original task order.
-    let mut ok_rows: std::collections::HashMap<usize, TaskRow> = std::collections::HashMap::new();
-    for (slot, &i) in ok_index.iter().enumerate() {
-        let att = &attempts[i];
-        let expected = &att.task.expected_answer;
-        let (count, estimated) = tokens[slot];
-        ok_rows.insert(
-            i,
-            TaskRow {
-                id: att.task.id.clone(),
-                correct: answers_match(&records[slot].answer, expected),
-                quality: scored[slot].quality_score,
-                tokens: count,
-                tokens_estimated: estimated,
-                error: None,
-            },
-        );
-    }
+    // Aggregate the samples of each task into one row, in task order.
+    let mut rows = Vec::with_capacity(attempts.len());
+    for (ti, ta) in attempts.iter().enumerate() {
+        let slots: Vec<usize> = owner
+            .iter()
+            .enumerate()
+            .filter_map(|(s, &o)| (o == ti).then_some(s))
+            .collect();
+        let total_samples = ta.samples.len();
 
-    attempts
-        .iter()
-        .enumerate()
-        .map(|(i, att)| match &att.result {
-            Ok(_) => ok_rows
-                .remove(&i)
-                .expect("ok row built for every Ok attempt"),
-            Err(msg) => TaskRow {
-                id: att.task.id.clone(),
+        if slots.is_empty() {
+            // Every sample errored; surface the first error and exclude the task.
+            let err = ta
+                .samples
+                .iter()
+                .find_map(|r| r.as_ref().err().cloned())
+                .unwrap_or_else(|| "no samples".into());
+            rows.push(TaskRow {
+                id: ta.task.id.clone(),
                 correct: false,
                 quality: 0.0,
                 tokens: 0,
                 tokens_estimated: false,
-                error: Some(msg.clone()),
-            },
-        })
-        .collect()
+                samples: total_samples,
+                samples_correct: 0,
+                error: Some(err),
+            });
+            continue;
+        }
+
+        let mut samples_correct = 0usize;
+        let mut quality_sum = 0.0f32;
+        let mut token_total = 0usize;
+        let mut estimated = false;
+        for &s in &slots {
+            if answers_match(&records[s].answer, &ta.task.expected_answer) {
+                samples_correct += 1;
+            }
+            quality_sum += scored[s].quality_score;
+            token_total += rec_tokens[s].0;
+            estimated |= rec_tokens[s].1;
+        }
+        rows.push(TaskRow {
+            id: ta.task.id.clone(),
+            correct: samples_correct > 0, // pass@k
+            quality: quality_sum / slots.len() as f32,
+            tokens: token_total,
+            tokens_estimated: estimated,
+            samples: total_samples,
+            samples_correct,
+            error: None,
+        });
+    }
+    rows
 }
 
 #[cfg(test)]
@@ -143,28 +171,32 @@ mod tests {
         assert_eq!(ans, "just 4");
     }
 
+    fn single(task: Task, result: Result<Completion, String>) -> TaskAttempts {
+        TaskAttempts {
+            task,
+            samples: vec![result],
+        }
+    }
+
     #[test]
     fn build_rows_marks_correct_and_carries_errors() {
         let scoring = ScoringConfig::default();
         let attempts = vec![
-            Attempt {
-                task: task("a", "4"),
-                result: Ok(Completion {
+            single(
+                task("a", "4"),
+                Ok(Completion {
                     text: "<think>2+2=4. verify 4</think> 4".into(),
                     completion_tokens: Some(9),
                 }),
-            },
-            Attempt {
-                task: task("b", "4"),
-                result: Ok(Completion {
+            ),
+            single(
+                task("b", "4"),
+                Ok(Completion {
                     text: "<think>hmm</think> 5".into(),
                     completion_tokens: None,
                 }),
-            },
-            Attempt {
-                task: task("c", "4"),
-                result: Err("timeout".into()),
-            },
+            ),
+            single(task("c", "4"), Err("timeout".into())),
         ];
 
         let rows = build_rows(&attempts, &scoring);
@@ -174,16 +206,62 @@ mod tests {
         assert!(rows[0].correct);
         assert_eq!(rows[0].tokens, 9);
         assert!(!rows[0].tokens_estimated);
+        assert_eq!(rows[0].samples, 1);
+        assert_eq!(rows[0].samples_correct, 1);
         assert!(rows[0].error.is_none());
 
         assert_eq!(rows[1].id, "b");
         assert!(!rows[1].correct); // "5" != "4"
         assert!(rows[1].tokens_estimated); // no usage → estimated
+        assert_eq!(rows[1].samples_correct, 0);
         assert!(rows[1].error.is_none());
 
         assert_eq!(rows[2].id, "c");
         assert!(!rows[2].correct);
         assert_eq!(rows[2].tokens, 0);
+        assert_eq!(rows[2].samples, 1);
         assert_eq!(rows[2].error.as_deref(), Some("timeout"));
+    }
+
+    #[test]
+    fn pass_at_k_solves_on_any_correct_sample_and_sums_tokens() {
+        let scoring = ScoringConfig::default();
+        // Three samples: wrong, right, wrong. pass@3 → solved.
+        let attempts = vec![TaskAttempts {
+            task: task("a", "4"),
+            samples: vec![
+                Ok(Completion {
+                    text: "<think>maybe</think> 5".into(),
+                    completion_tokens: Some(10),
+                }),
+                Ok(Completion {
+                    text: "<think>2+2=4</think> 4".into(),
+                    completion_tokens: Some(20),
+                }),
+                Ok(Completion {
+                    text: "<think>no</think> 6".into(),
+                    completion_tokens: Some(30),
+                }),
+            ],
+        }];
+
+        let rows = build_rows(&attempts, &scoring);
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0].correct, "any correct sample solves the task");
+        assert_eq!(rows[0].samples, 3);
+        assert_eq!(rows[0].samples_correct, 1);
+        assert_eq!(rows[0].tokens, 60, "all sample tokens sum into cost");
+    }
+
+    #[test]
+    fn all_samples_error_marks_task_errored() {
+        let scoring = ScoringConfig::default();
+        let attempts = vec![TaskAttempts {
+            task: task("a", "4"),
+            samples: vec![Err("timeout".into()), Err("500".into())],
+        }];
+        let rows = build_rows(&attempts, &scoring);
+        assert_eq!(rows[0].samples, 2);
+        assert_eq!(rows[0].error.as_deref(), Some("timeout"));
     }
 }

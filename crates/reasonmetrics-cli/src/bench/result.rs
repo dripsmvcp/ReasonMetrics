@@ -198,6 +198,8 @@ mod tests {
                 quality: 80.0,
                 tokens: 100,
                 tokens_estimated: false,
+                samples: 1,
+                samples_correct: 1,
                 error: None,
             },
             TaskRow {
@@ -206,6 +208,8 @@ mod tests {
                 quality: 60.0,
                 tokens: 200,
                 tokens_estimated: false,
+                samples: 1,
+                samples_correct: 0,
                 error: None,
             },
         ];

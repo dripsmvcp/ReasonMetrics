@@ -70,6 +70,8 @@ mod tests {
             quality,
             tokens,
             tokens_estimated: false,
+            samples: 1,
+            samples_correct: usize::from(correct),
             error: err.map(String::from),
         }
     }
