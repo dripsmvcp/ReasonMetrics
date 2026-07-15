@@ -30,6 +30,12 @@ jobs:
         run: cargo clippy --workspace --all-targets
       - name: Tests
         run: cargo test --workspace
+      # The bench subcommand is behind an opt-in feature, so the default
+      # workspace run above never compiles or exercises it. Cover it explicitly.
+      - name: Clippy (bench feature)
+        run: cargo clippy -p reasonmetrics-cli --features bench --all-targets
+      - name: Tests (bench feature)
+        run: cargo test -p reasonmetrics-cli --features bench
 
   wasm-check:
     name: Core compiles for wasm32

@@ -33,7 +33,8 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --locked -p reasonmetrics-cli --target ${{ matrix.target }}
+        # --features bench so the prebuilt binaries ship the bench subcommand.
+        run: cargo build --release --locked -p reasonmetrics-cli --features bench --target ${{ matrix.target }}
 
       - name: Package
         shell: bash
