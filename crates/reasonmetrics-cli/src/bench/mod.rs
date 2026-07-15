@@ -7,6 +7,7 @@ pub mod model;
 pub mod result;
 pub mod runner;
 pub mod score;
+pub mod site;
 pub mod taskset;
 
 use std::path::PathBuf;
@@ -59,6 +60,8 @@ pub struct LeaderboardArgs {
     pub sort: leaderboard::SortKey,
     pub format: LeaderboardFormat,
     pub out: Option<PathBuf>,
+    /// If set, write a complete standalone `index.html` here instead of a table.
+    pub site: Option<PathBuf>,
 }
 
 /// Combine every committed result JSON under `results/` into one leaderboard.
@@ -76,6 +79,16 @@ pub fn run_leaderboard(args: LeaderboardArgs) -> anyhow::Result<()> {
         args.results.display()
     );
     let groups = leaderboard::assemble(entries, args.task_set.as_deref(), args.sort);
+
+    // A `--site` dir gets a full standalone page; otherwise render a table.
+    if let Some(dir) = &args.site {
+        std::fs::create_dir_all(dir)?;
+        let path = dir.join("index.html");
+        std::fs::write(&path, site::render(&groups))?;
+        eprintln!("Leaderboard site written to {}", path.display());
+        return Ok(());
+    }
+
     let rendered = leaderboard::render(&groups, args.format);
     match &args.out {
         Some(p) => {

@@ -78,6 +78,9 @@ into a single ranked table:
   fewest tokens/correct then model name — deterministic output).
 - Non-result `.json` files in the directory are skipped with a warning.
 - `--out PATH` writes the rendered leaderboard to a file instead of stdout.
+- `--site DIR` writes a complete standalone `index.html` (inline CSS, no external
+  assets) into `DIR` — the public [leaderboard/](../leaderboard) page. Output is
+  deterministic, so it only diffs when the results change.
 
 ## Reproducibility & caveats
 

@@ -112,6 +112,9 @@ enum Commands {
         /// Write the rendered leaderboard here instead of stdout
         #[arg(long)]
         out: Option<std::path::PathBuf>,
+        /// Generate a standalone static site (index.html) in this directory
+        #[arg(long)]
+        site: Option<std::path::PathBuf>,
     },
 }
 
@@ -210,6 +213,7 @@ fn main() -> anyhow::Result<()> {
             sort,
             format,
             out,
+            site,
         } => {
             let sort = sort
                 .parse::<bench::leaderboard::SortKey>()
@@ -223,6 +227,7 @@ fn main() -> anyhow::Result<()> {
                 sort,
                 format,
                 out,
+                site,
             })?
         }
     }
