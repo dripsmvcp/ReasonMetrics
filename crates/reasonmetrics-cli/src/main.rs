@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+#[cfg(feature = "bench")]
+mod bench;
 mod output;
 mod parser;
 mod pipeline;
@@ -65,6 +67,32 @@ enum Commands {
     InitConfig,
     /// List the model families in the embedded registry
     Models,
+    /// Benchmark a model's reasoning over a fixed task set (feature: bench)
+    #[cfg(feature = "bench")]
+    Bench {
+        #[arg(long)]
+        endpoint: String,
+        #[arg(long)]
+        model: String,
+        #[arg(long, default_value = "overthinking-v1")]
+        task_set: String,
+        #[arg(long, default_value_t = 0.0)]
+        temperature: f32,
+        #[arg(long, default_value_t = 8192)]
+        max_tokens: usize,
+        #[arg(long, default_value_t = 8)]
+        concurrency: usize,
+        #[arg(long)]
+        cost_per_mtok: Option<f32>,
+        #[arg(long)]
+        api_key_env: Option<String>,
+        #[arg(long)]
+        out: Option<std::path::PathBuf>,
+        #[arg(long, default_value = "table")]
+        format: String,
+        #[arg(long, default_value_t = 2)]
+        retries: usize,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -120,6 +148,39 @@ fn main() -> anyhow::Result<()> {
         Commands::Explain => cmd_explain(),
         Commands::InitConfig => cmd_init_config(),
         Commands::Models => cmd_models(),
+        #[cfg(feature = "bench")]
+        Commands::Bench {
+            endpoint,
+            model,
+            task_set,
+            temperature,
+            max_tokens,
+            concurrency,
+            cost_per_mtok,
+            api_key_env,
+            out,
+            format,
+            retries,
+        } => {
+            let config = Config::load(&cli.config)?;
+            let format = format
+                .parse::<bench::LeaderboardFormat>()
+                .map_err(|e| anyhow::anyhow!(e))?;
+            let args = bench::BenchArgs {
+                endpoint,
+                model,
+                task_set,
+                temperature,
+                max_tokens,
+                concurrency,
+                cost_per_mtok,
+                api_key_env,
+                out,
+                format,
+                retries,
+            };
+            bench::run(args, &config.scoring)?
+        }
     }
 
     Ok(())

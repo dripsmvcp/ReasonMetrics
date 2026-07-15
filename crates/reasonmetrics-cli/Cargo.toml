@@ -14,6 +14,12 @@ categories = ["command-line-utilities", "text-processing", "science"]
 name = "reasonmetrics"
 path = "src/main.rs"
 
+[features]
+default = []
+# The `bench` subcommand's networked deps stay opt-in so the default curation
+# binary is lean and TLS-free.
+bench = ["dep:ureq", "dep:sha2"]
+
 [dependencies]
 # `version` is required alongside `path` so `cargo publish` can resolve the
 # dependency from crates.io. Publish order: reasonmetrics-core first, then this.
@@ -31,8 +37,11 @@ flate2 = "1.0"
 minijinja = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+ureq = { version = "2", features = ["json"], optional = true }
+sha2 = { version = "0.10", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "3"
 tempfile = "3"
+tiny_http = "0.12"
