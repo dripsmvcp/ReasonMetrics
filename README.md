@@ -36,6 +36,15 @@ Every lab training a reasoning model processes millions of thinking traces. The 
 
 ReasonMetrics makes reasoning quality measurable, and wasteful traces filterable.
 
+## What a Reasoning Trace Is For
+
+A trace has two very different downstream uses, and they pull in opposite directions:
+
+- **Training material** — traces are examples you fine-tune on: generate them from a strong model, keep the good ones, train a smaller model to imitate the reasoning. The datasets in [Validated Datasets](#validated-datasets) (LIMO, s1K, OpenThoughts) were built this way. A trace is *raw material* — a model gets built from it, so trace quality becomes model behavior directly. **Curating this is ReasonMetrics' main job.**
+- **A benchmark verdict** — score a model's traces to decide which model to ship, or to catch a regression (did quantization hurt its reasoning?). Here the score *is* the deliverable: a decision gets made, then it's spent.
+
+Same score, two jobs — one produces training data, the other produces a decision. ReasonMetrics serves both: it filters traces for training, and it supplies the quality axis in a model comparison.
+
 ## How It Compares
 
 General-purpose curation pipelines ([Data-Juicer](https://github.com/datajuicer/data-juicer), [datatrove](https://github.com/huggingface/datatrove), [NeMo Curator](https://github.com/NVIDIA/NeMo-Curator)) filter text with generic operators — dedup, length, perplexity. LLM-as-judge tools score quality but cost ~$1,000 per 100K traces, run at 2–5 traces/sec, send your data to a third party, and give different scores on every run. ReasonMetrics is the only tool purpose-built for reasoning-trace anatomy:
@@ -123,6 +132,14 @@ drops (unfiltered baseline: 48.0%). Details, controls, and the ways this can mis
 you: [docs/CALIBRATION.md](docs/CALIBRATION.md).
 
 Every command takes `--config <file>` (default: `reasonmetrics.toml` in the current directory — the repo root ships a ready-made one). To customize scoring, edit that file in place or pass a generated one: `reasonmetrics score --config my-scoring.toml -i traces.jsonl`. (Careful: `init-config > reasonmetrics.toml` at the repo root overwrites the tracked file.)
+
+Benchmark a model's reasoning over a fixed task set (build with `--features bench`):
+
+```bash
+reasonmetrics bench --endpoint http://localhost:8000/v1 --model deepseek-r1:8b --task-set overthinking-v1
+```
+
+See [docs/BENCH.md](docs/BENCH.md) for metrics and reproducibility notes.
 
 ## Python
 
