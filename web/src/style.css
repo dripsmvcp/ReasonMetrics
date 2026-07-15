@@ -431,6 +431,12 @@ body {
   gap: 0.25rem;
 }
 
+.rate-preset {
+  font: inherit;
+  font-size: 0.8em;
+  max-width: 16em;
+}
+
 .rate-label {
   font-size: 0.8em;
   opacity: 0.85;

@@ -7,7 +7,26 @@
 // the wasm bridge delivers them.
 
 import { fireEvent, render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// The registry lives in the wasm module, which can't load under happy-dom's
+// browser fetch path, so stub costPresets with a fixture shaped exactly like a
+// real `[cost]` entry. Real registry parsing is covered in ../lib/wasm.test.ts.
+vi.mock("../lib/wasm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/wasm")>();
+  return {
+    ...actual,
+    costPresets: () => [
+      {
+        id: "deepseek-r1",
+        label: "DeepSeek-R1 family",
+        outputPerMtok: 2.19,
+        inputPerMtok: 0.55,
+        source: "test",
+      },
+    ],
+  };
+});
 import type {
   AnalysisResult,
   Annotation,
@@ -145,6 +164,39 @@ describe("AnatomyView: header", () => {
     const container = renderAnatomy({ composite: 40.4 });
     const label = container.querySelector("svg.dial")?.getAttribute("aria-label");
     expect(label).toContain("better than 40% of real reasoning traces");
+  });
+});
+
+// #11: the cost meter offers per-family $/MTok presets from the embedded
+// registry instead of only a manual number. Needs real wasm (the registry
+// lives in it), so this block initializes it.
+describe("AnatomyView: cost presets (#11)", () => {
+  it("offers a registry cost preset and applies its output rate to the meter", () => {
+    const container = renderAnatomy({ tokenCount: 1_000_000 });
+    const preset = container.querySelector<HTMLSelectElement>("select.rate-preset")!;
+    expect(preset).not.toBeNull();
+
+    // deepseek-r1 is the family that ships a [cost] table.
+    const option = Array.from(preset.options).find((o) => o.value === "deepseek-r1");
+    expect(option).toBeDefined();
+
+    fireEvent.change(preset, { target: { value: "deepseek-r1" } });
+    const rate = container.querySelector<HTMLInputElement>(".rate-input")!;
+    expect(Number(rate.value)).toBeGreaterThan(0);
+    // 1M tokens at $X/M = $X, so the meter reflects the preset's output rate.
+    expect(container.querySelector(".cost-value")?.textContent).toBe(
+      `$${Number(rate.value).toFixed(4)}`,
+    );
+  });
+
+  it("reverts the preset selector to Custom when the rate is edited by hand", () => {
+    const container = renderAnatomy({ tokenCount: 1_000_000 });
+    const preset = container.querySelector<HTMLSelectElement>("select.rate-preset")!;
+    fireEvent.change(preset, { target: { value: "deepseek-r1" } });
+    fireEvent.change(container.querySelector<HTMLInputElement>(".rate-input")!, {
+      target: { value: "7" },
+    });
+    expect(preset.value).toBe("custom");
   });
 });
 

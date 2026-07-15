@@ -5,6 +5,16 @@
 // `TraceRecord` struct's serde `alias(...)` attributes). This table is a
 // hand-maintained TS-side mirror of that list — keep them in sync manually,
 // there is no shared codegen between the two.
+//
+// #11 asked whether this could be driven from the registry (`registry_json()`)
+// instead. It cannot, and that is by design: the registry describes per-MODEL
+// extraction (think-tags, `reasoning_fields` for structured input) and cost, not
+// the model-agnostic canonical field-name aliases below. Those belong to the
+// trace schema itself and rightly live once, in `trace.rs`. The registry half of
+// #11 that DID land is the cost meter's per-family presets (see lib/wasm.ts
+// `costPresets` + components/AnatomyHeader). A future, behaviour-changing option
+// noted there: fold a model's `reasoning_fields` into the `thinking` alias set,
+// but that merges per-model data into a global table and wants its own issue.
 
 import type { TraceInput } from "./types";
 

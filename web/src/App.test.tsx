@@ -17,6 +17,9 @@ import type { AnalysisResult, ScoredTrace, TraceInput } from "./lib/types";
 
 vi.mock("./lib/wasm", () => ({
   analyzeTrace: vi.fn(),
+  // The anatomy header reads cost presets from the registry; App wiring tests
+  // don't exercise them, so an empty list keeps the meter to its manual rate.
+  costPresets: () => [],
 }));
 
 import { analyzeTrace } from "./lib/wasm";

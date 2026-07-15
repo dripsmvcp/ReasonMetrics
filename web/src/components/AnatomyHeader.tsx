@@ -1,23 +1,58 @@
 // Anatomy header: token count, cost at a configurable rate, and the
 // composite-score dial.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { AnalysisResult } from "../lib/types";
+import { costPresets } from "../lib/wasm";
 import { scoreClass } from "./scoreClass";
 
 const DEFAULT_RATE_PER_MILLION = 3;
+const CUSTOM_PRESET = "custom";
 const DIAL_RADIUS = 42;
 const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_RADIUS;
 
 export function AnatomyHeader({ result }: { result: AnalysisResult }) {
   const [rate, setRate] = useState(DEFAULT_RATE_PER_MILLION);
+  // Family cost tables from the embedded registry. Read once — the wasm module
+  // is already initialized by the time any result exists to render.
+  const presets = useMemo(() => costPresets(), []);
+  const [presetId, setPresetId] = useState(CUSTOM_PRESET);
   const cost = (result.tokenCount / 1_000_000) * rate;
+
+  function handlePresetChange(id: string): void {
+    setPresetId(id);
+    // Thinking tokens are generated (output) tokens, so the meter uses the
+    // family's output price. "Custom" leaves the manual rate untouched.
+    const preset = presets.find((p) => p.id === id);
+    if (preset) setRate(preset.outputPerMtok);
+  }
+
+  // A manual edit means the rate no longer reflects a preset.
+  function handleRateChange(value: number): void {
+    setRate(value);
+    setPresetId(CUSTOM_PRESET);
+  }
 
   return (
     <header className="anatomy-header">
       <div className="token-count">{result.tokenCount} tokens</div>
 
       <div className="cost-block">
+        {presets.length > 0 && (
+          <select
+            className="rate-preset"
+            aria-label="cost preset"
+            value={presetId}
+            onChange={(event) => handlePresetChange(event.target.value)}
+          >
+            <option value={CUSTOM_PRESET}>Custom rate</option>
+            {presets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {`${preset.label} ($${preset.outputPerMtok}/M out)`}
+              </option>
+            ))}
+          </select>
+        )}
         <label className="rate-label">
           $ / 1M tokens{" "}
           <input
@@ -26,7 +61,7 @@ export function AnatomyHeader({ result }: { result: AnalysisResult }) {
             min={0}
             step={0.5}
             value={rate}
-            onChange={(event) => setRate(Number(event.target.value) || 0)}
+            onChange={(event) => handleRateChange(Number(event.target.value) || 0)}
           />
         </label>
         <div className="cost-value">${cost.toFixed(4)}</div>

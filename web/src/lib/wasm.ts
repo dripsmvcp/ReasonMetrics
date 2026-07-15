@@ -3,7 +3,10 @@
 // so this file is the only place that knows the wasm-bindgen loading and
 // JSON-shape details.
 
-import init, { analyze as wasmAnalyze } from "../pkg/reasonmetrics_wasm.js";
+import init, {
+  analyze as wasmAnalyze,
+  registry_json as wasmRegistryJson,
+} from "../pkg/reasonmetrics_wasm.js";
 import type {
   AnalysisResult,
   Annotation,
@@ -19,6 +22,30 @@ interface RawAnalyzeOutput {
   annotations: Annotation[];
   scores: ScoreEntry[];
 }
+
+/** The subset of a registry entry the web app reads. Mirrors
+ * `reasonmetrics_core::registry::RegistryEntry`'s serde shape; only the fields
+ * consumed here are typed. */
+interface RawRegistryEntry {
+  id: string;
+  display_name: string;
+  cost?: { input_per_mtok: number; output_per_mtok: number; source: string };
+}
+
+/** A per-family cost preset for the anatomy view's cost meter. `outputPerMtok`
+ * is the rate that matters here: the meter counts *thinking* tokens, which are
+ * generated (output) tokens, so the cost of producing a reasoning trace is
+ * output-priced. Sourced from the embedded registry so the CLI, wasm, and web
+ * share one cost table. */
+export interface CostPreset {
+  id: string;
+  label: string;
+  outputPerMtok: number;
+  inputPerMtok: number;
+  source: string;
+}
+
+let costPresetsCache: CostPreset[] | null = null;
 
 let readyPromise: Promise<void> | null = null;
 
@@ -81,4 +108,36 @@ export function analyzeTrace(trace: TraceInput): AnalysisResult {
     extractedThinking: raw.extracted_thinking,
     scored: raw.scored,
   };
+}
+
+/**
+ * Per-family cost presets from the embedded registry, for the cost meter.
+ * Only families that ship a `[cost]` table appear (open-weight models omit it
+ * because pricing is host-dependent), so the list grows as registry entries
+ * gain cost data — no web change needed. `initWasm()` must have resolved.
+ * Parsed once and cached.
+ */
+export function costPresets(): CostPreset[] {
+  if (costPresetsCache) return costPresetsCache;
+  let entries: RawRegistryEntry[];
+  try {
+    entries = JSON.parse(wasmRegistryJson()) as RawRegistryEntry[];
+  } catch {
+    // Presets are an enhancement; if the registry can't be read (e.g. wasm not
+    // yet initialized) degrade to none rather than breaking the view. Not
+    // cached, so a later call after init still gets the real list.
+    return [];
+  }
+  costPresetsCache = entries
+    .filter((e): e is RawRegistryEntry & { cost: NonNullable<RawRegistryEntry["cost"]> } =>
+      e.cost != null,
+    )
+    .map((e) => ({
+      id: e.id,
+      label: e.display_name,
+      outputPerMtok: e.cost.output_per_mtok,
+      inputPerMtok: e.cost.input_per_mtok,
+      source: e.cost.source,
+    }));
+  return costPresetsCache;
 }
