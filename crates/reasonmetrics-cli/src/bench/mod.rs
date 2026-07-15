@@ -2,6 +2,7 @@
 //! endpoint and score the returned traces. Feature-gated (`bench`).
 
 pub mod aggregate;
+pub mod leaderboard;
 pub mod model;
 pub mod result;
 pub mod runner;
@@ -49,6 +50,46 @@ pub struct BenchArgs {
     pub retries: usize,
     /// Draws per task. >1 turns accuracy into pass@k (any correct sample solves).
     pub samples: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeaderboardArgs {
+    pub results: PathBuf,
+    pub task_set: Option<String>,
+    pub sort: leaderboard::SortKey,
+    pub format: LeaderboardFormat,
+    pub out: Option<PathBuf>,
+}
+
+/// Combine every committed result JSON under `results/` into one leaderboard.
+pub fn run_leaderboard(args: LeaderboardArgs) -> anyhow::Result<()> {
+    let entries = leaderboard::load_dir(&args.results)?;
+    if entries.is_empty() {
+        anyhow::bail!(
+            "no bench result JSONs found in {} (run `reasonmetrics bench` first)",
+            args.results.display()
+        );
+    }
+    eprintln!(
+        "Loaded {} result file(s) from {}",
+        entries.len(),
+        args.results.display()
+    );
+    let groups = leaderboard::assemble(entries, args.task_set.as_deref(), args.sort);
+    let rendered = leaderboard::render(&groups, args.format);
+    match &args.out {
+        Some(p) => {
+            if let Some(parent) = p.parent() {
+                if !parent.as_os_str().is_empty() {
+                    std::fs::create_dir_all(parent)?;
+                }
+            }
+            std::fs::write(p, &rendered)?;
+            eprintln!("Leaderboard written to {}", p.display());
+        }
+        None => println!("{rendered}"),
+    }
+    Ok(())
 }
 
 pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {

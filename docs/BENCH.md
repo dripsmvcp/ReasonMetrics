@@ -63,6 +63,22 @@ after several tries pays for every draw in tokens/correct. Set `--temperature`
 above 0, or the `k` draws are identical and pass@k collapses to pass@1 (the tool
 warns when you don't).
 
+## Assembling a leaderboard
+
+Each `bench` run writes one result JSON under `results/`. To combine many runs
+into a single ranked table:
+
+    reasonmetrics leaderboard --results results/ --sort accuracy --format md
+
+- Rows are **grouped by task set** (name + sha256) — accuracy across different
+  problem sets is not comparable, so those never share a table.
+- The newest run wins per (model, task set, `samples`); an old run is superseded,
+  not double-counted. Different `samples` (pass@1 vs pass@4) stay separate rows.
+- `--sort accuracy|quality|tokens|cost` (default `accuracy`, ties broken by
+  fewest tokens/correct then model name — deterministic output).
+- Non-result `.json` files in the directory are skipped with a warning.
+- `--out PATH` writes the rendered leaderboard to a file instead of stdout.
+
 ## Reproducibility & caveats
 
 Each run writes a result JSON embedding the exact command, the task-set sha256,

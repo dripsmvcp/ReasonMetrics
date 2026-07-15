@@ -96,6 +96,23 @@ enum Commands {
         #[arg(long, default_value_t = 1)]
         samples: usize,
     },
+    /// Combine committed bench result JSONs into one leaderboard (feature: bench)
+    #[cfg(feature = "bench")]
+    Leaderboard {
+        #[arg(long, default_value = "results")]
+        results: std::path::PathBuf,
+        /// Restrict to a single task set (default: one table per set found)
+        #[arg(long)]
+        task_set: Option<String>,
+        /// accuracy|quality|tokens|cost
+        #[arg(long, default_value = "accuracy")]
+        sort: String,
+        #[arg(long, default_value = "table")]
+        format: String,
+        /// Write the rendered leaderboard here instead of stdout
+        #[arg(long)]
+        out: Option<std::path::PathBuf>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -185,6 +202,28 @@ fn main() -> anyhow::Result<()> {
                 samples,
             };
             bench::run(args, &config.scoring)?
+        }
+        #[cfg(feature = "bench")]
+        Commands::Leaderboard {
+            results,
+            task_set,
+            sort,
+            format,
+            out,
+        } => {
+            let sort = sort
+                .parse::<bench::leaderboard::SortKey>()
+                .map_err(|e| anyhow::anyhow!(e))?;
+            let format = format
+                .parse::<bench::LeaderboardFormat>()
+                .map_err(|e| anyhow::anyhow!(e))?;
+            bench::run_leaderboard(bench::LeaderboardArgs {
+                results,
+                task_set,
+                sort,
+                format,
+                out,
+            })?
         }
     }
 
