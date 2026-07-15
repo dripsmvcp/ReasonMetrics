@@ -1,0 +1,100 @@
+{"id":"ov2-001","problem":"What is 26 + 40?","expected_answer":"66"}
+{"id":"ov2-002","problem":"What is 20 + 87?","expected_answer":"107"}
+{"id":"ov2-003","problem":"What is 36 + 34?","expected_answer":"70"}
+{"id":"ov2-004","problem":"What is 38 + 54?","expected_answer":"92"}
+{"id":"ov2-005","problem":"What is 41 + 69?","expected_answer":"110"}
+{"id":"ov2-006","problem":"What is 15 + 27?","expected_answer":"42"}
+{"id":"ov2-007","problem":"What is 52 + 78?","expected_answer":"130"}
+{"id":"ov2-008","problem":"What is 29 + 37?","expected_answer":"66"}
+{"id":"ov2-009","problem":"What is 88 + 89?","expected_answer":"177"}
+{"id":"ov2-010","problem":"What is 23 + 42?","expected_answer":"65"}
+{"id":"ov2-011","problem":"What is 57 - 27?","expected_answer":"30"}
+{"id":"ov2-012","problem":"What is 85 - 22?","expected_answer":"63"}
+{"id":"ov2-013","problem":"What is 66 - 19?","expected_answer":"47"}
+{"id":"ov2-014","problem":"What is 85 - 14?","expected_answer":"71"}
+{"id":"ov2-015","problem":"What is 91 - 35?","expected_answer":"56"}
+{"id":"ov2-016","problem":"What is 43 - 11?","expected_answer":"32"}
+{"id":"ov2-017","problem":"What is 58 - 8?","expected_answer":"50"}
+{"id":"ov2-018","problem":"What is 41 - 38?","expected_answer":"3"}
+{"id":"ov2-019","problem":"What is 49 - 28?","expected_answer":"21"}
+{"id":"ov2-020","problem":"What is 50 - 19?","expected_answer":"31"}
+{"id":"ov2-021","problem":"What is 16 multiplied by 18?","expected_answer":"288"}
+{"id":"ov2-022","problem":"What is 4 multiplied by 9?","expected_answer":"36"}
+{"id":"ov2-023","problem":"What is 5 multiplied by 14?","expected_answer":"70"}
+{"id":"ov2-024","problem":"What is 16 multiplied by 5?","expected_answer":"80"}
+{"id":"ov2-025","problem":"What is 17 multiplied by 7?","expected_answer":"119"}
+{"id":"ov2-026","problem":"What is 13 multiplied by 14?","expected_answer":"182"}
+{"id":"ov2-027","problem":"What is 7 multiplied by 11?","expected_answer":"77"}
+{"id":"ov2-028","problem":"What is 19 multiplied by 4?","expected_answer":"76"}
+{"id":"ov2-029","problem":"What is 11 multiplied by 19?","expected_answer":"209"}
+{"id":"ov2-030","problem":"What is 6 multiplied by 14?","expected_answer":"84"}
+{"id":"ov2-031","problem":"What is 40 divided by 8?","expected_answer":"5"}
+{"id":"ov2-032","problem":"What is 88 divided by 11?","expected_answer":"8"}
+{"id":"ov2-033","problem":"What is 88 divided by 11?","expected_answer":"8"}
+{"id":"ov2-034","problem":"What is 120 divided by 12?","expected_answer":"10"}
+{"id":"ov2-035","problem":"What is 100 divided by 10?","expected_answer":"10"}
+{"id":"ov2-036","problem":"What is 40 divided by 10?","expected_answer":"4"}
+{"id":"ov2-037","problem":"What is 50 divided by 10?","expected_answer":"5"}
+{"id":"ov2-038","problem":"What is 33 divided by 3?","expected_answer":"11"}
+{"id":"ov2-039","problem":"What is 88 divided by 11?","expected_answer":"8"}
+{"id":"ov2-040","problem":"What is 24 divided by 4?","expected_answer":"6"}
+{"id":"ov2-041","problem":"Which is larger, 954 or 931?","expected_answer":"954"}
+{"id":"ov2-042","problem":"Which is larger, 230 or 838?","expected_answer":"838"}
+{"id":"ov2-043","problem":"Which is larger, 156 or 153?","expected_answer":"156"}
+{"id":"ov2-044","problem":"Which is larger, 723 or 183?","expected_answer":"723"}
+{"id":"ov2-045","problem":"Which is larger, 127 or 937?","expected_answer":"937"}
+{"id":"ov2-046","problem":"Which is larger, 399 or 503?","expected_answer":"503"}
+{"id":"ov2-047","problem":"Which is larger, 397 or 543?","expected_answer":"543"}
+{"id":"ov2-048","problem":"Which is larger, 261 or 224?","expected_answer":"261"}
+{"id":"ov2-049","problem":"Which is larger, 363 or 721?","expected_answer":"721"}
+{"id":"ov2-050","problem":"Which is larger, 755 or 778?","expected_answer":"778"}
+{"id":"ov2-051","problem":"Is 500 even or odd?","expected_answer":"even"}
+{"id":"ov2-052","problem":"Is 806 even or odd?","expected_answer":"even"}
+{"id":"ov2-053","problem":"Is 754 even or odd?","expected_answer":"even"}
+{"id":"ov2-054","problem":"Is 564 even or odd?","expected_answer":"even"}
+{"id":"ov2-055","problem":"Is 923 even or odd?","expected_answer":"odd"}
+{"id":"ov2-056","problem":"Is 711 even or odd?","expected_answer":"odd"}
+{"id":"ov2-057","problem":"Is 783 even or odd?","expected_answer":"odd"}
+{"id":"ov2-058","problem":"Is 459 even or odd?","expected_answer":"odd"}
+{"id":"ov2-059","problem":"Is 206 even or odd?","expected_answer":"even"}
+{"id":"ov2-060","problem":"Is 530 even or odd?","expected_answer":"even"}
+{"id":"ov2-061","problem":"How many odd numbers are in the list [13, 73, 52, 89, 91]?","expected_answer":"4"}
+{"id":"ov2-062","problem":"How many odd numbers are in the list [21, 75, 92, 39, 59]?","expected_answer":"4"}
+{"id":"ov2-063","problem":"How many odd numbers are in the list [40, 31, 29, 74, 94]?","expected_answer":"2"}
+{"id":"ov2-064","problem":"How many odd numbers are in the list [44, 88, 36, 87, 61]?","expected_answer":"2"}
+{"id":"ov2-065","problem":"How many odd numbers are in the list [69, 69, 77, 88, 28]?","expected_answer":"3"}
+{"id":"ov2-066","problem":"How many odd numbers are in the list [6, 44, 90, 33, 92]?","expected_answer":"1"}
+{"id":"ov2-067","problem":"How many odd numbers are in the list [65, 16, 15, 37, 92]?","expected_answer":"3"}
+{"id":"ov2-068","problem":"How many odd numbers are in the list [33, 5, 72, 3, 34]?","expected_answer":"3"}
+{"id":"ov2-069","problem":"How many odd numbers are in the list [51, 44, 58, 69, 72]?","expected_answer":"2"}
+{"id":"ov2-070","problem":"How many odd numbers are in the list [87, 78, 28, 29, 62]?","expected_answer":"2"}
+{"id":"ov2-071","problem":"What is the 4th smallest number in the list [48, 57, 61, 62, 21]?","expected_answer":"61"}
+{"id":"ov2-072","problem":"What is the largest number in the list [84, 85, 30, 34, 38]?","expected_answer":"85"}
+{"id":"ov2-073","problem":"What is the 3rd smallest number in the list [25, 73, 43, 44, 32]?","expected_answer":"43"}
+{"id":"ov2-074","problem":"What is the 4th smallest number in the list [29, 42, 73, 96, 64]?","expected_answer":"73"}
+{"id":"ov2-075","problem":"What is the largest number in the list [43, 24, 85, 83, 7]?","expected_answer":"85"}
+{"id":"ov2-076","problem":"What is the largest number in the list [43, 78, 12, 32, 7]?","expected_answer":"78"}
+{"id":"ov2-077","problem":"What is the smallest number in the list [10, 31, 51, 59, 69]?","expected_answer":"10"}
+{"id":"ov2-078","problem":"What is the smallest number in the list [15, 42, 49, 10, 39]?","expected_answer":"10"}
+{"id":"ov2-079","problem":"What is the 2nd smallest number in the list [90, 31, 2, 87, 84]?","expected_answer":"31"}
+{"id":"ov2-080","problem":"What is the smallest number in the list [37, 26, 55, 38, 41]?","expected_answer":"26"}
+{"id":"ov2-081","problem":"What is the remainder when 31 is divided by 12?","expected_answer":"7"}
+{"id":"ov2-082","problem":"What is the remainder when 56 is divided by 11?","expected_answer":"1"}
+{"id":"ov2-083","problem":"What is the remainder when 5 is divided by 3?","expected_answer":"2"}
+{"id":"ov2-084","problem":"What is the remainder when 74 is divided by 12?","expected_answer":"2"}
+{"id":"ov2-085","problem":"What is the remainder when 94 is divided by 8?","expected_answer":"6"}
+{"id":"ov2-086","problem":"What is the remainder when 6 is divided by 5?","expected_answer":"1"}
+{"id":"ov2-087","problem":"What is the remainder when 57 is divided by 3?","expected_answer":"0"}
+{"id":"ov2-088","problem":"What is the remainder when 34 is divided by 9?","expected_answer":"7"}
+{"id":"ov2-089","problem":"What is the remainder when 63 is divided by 7?","expected_answer":"0"}
+{"id":"ov2-090","problem":"What is the remainder when 24 is divided by 9?","expected_answer":"6"}
+{"id":"ov2-091","problem":"What is 25% of 68?","expected_answer":"17"}
+{"id":"ov2-092","problem":"What is 50% of 34?","expected_answer":"17"}
+{"id":"ov2-093","problem":"What is 25% of 36?","expected_answer":"9"}
+{"id":"ov2-094","problem":"What is 25% of 12?","expected_answer":"3"}
+{"id":"ov2-095","problem":"What is 50% of 16?","expected_answer":"8"}
+{"id":"ov2-096","problem":"What is 5% of 100?","expected_answer":"5"}
+{"id":"ov2-097","problem":"What is 25% of 16?","expected_answer":"4"}
+{"id":"ov2-098","problem":"What is 25% of 12?","expected_answer":"3"}
+{"id":"ov2-099","problem":"What is 25% of 60?","expected_answer":"15"}
+{"id":"ov2-100","problem":"What is 10% of 20?","expected_answer":"2"}

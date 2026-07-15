@@ -21,6 +21,26 @@ Requires a build with the `bench` feature:
 The API key is read from the named env var, never a flag — so it never lands in
 your shell history or the committed command.
 
+## Task sets
+
+Sets are frozen and content-hashed; the sha256 is embedded in every result so a
+leaderboard row names exactly which problems produced it.
+
+- **`overthinking-v1`** — 12 hand-authored arithmetic problems. A fast smoke set
+  for wiring up an endpoint.
+- **`overthinking-v2`** — 100 problems across ten categories (arithmetic,
+  comparison, parity, counting, ordering, remainder, percentage). Simple enough
+  that a competent model answers in a sentence, but exactly the kind of task that
+  tempts weak reasoning models into long detours — which is what the quality
+  score is meant to catch. This is the set to report.
+
+`overthinking-v2` is generated deterministically by
+[`scripts/gen_benchset.py`](../scripts/gen_benchset.py) (fixed seed, fixed
+category order), so anyone can regenerate the `.jsonl` byte-for-byte and confirm
+the embedded hash. The problems are our own authored instances; their shape is
+inspired by [LLMThinkBench](https://arxiv.org/abs/2507.04023) (MIT), not copied
+from it. Every answer is a single integer or word so grading needs no parser.
+
 ## Metrics
 
 - **quality** — mean ReasonMetrics composite (percentile vs real traces).

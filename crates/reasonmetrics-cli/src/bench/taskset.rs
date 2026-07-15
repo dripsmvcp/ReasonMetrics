@@ -23,13 +23,21 @@ pub struct TaskSet {
 fn bundled(name: &str) -> Option<&'static str> {
     match name {
         "overthinking-v1" => Some(include_str!("../../benchsets/overthinking-v1.jsonl")),
+        "overthinking-v2" => Some(include_str!("../../benchsets/overthinking-v2.jsonl")),
         _ => None,
     }
 }
 
+/// Names of every bundled set, for help text and error messages.
+pub const BUNDLED_SETS: &[&str] = &["overthinking-v1", "overthinking-v2"];
+
 pub fn load(name: &str) -> anyhow::Result<TaskSet> {
-    let raw = bundled(name)
-        .ok_or_else(|| anyhow::anyhow!("unknown task set `{name}` (bundled: overthinking-v1)"))?;
+    let raw = bundled(name).ok_or_else(|| {
+        anyhow::anyhow!(
+            "unknown task set `{name}` (bundled: {})",
+            BUNDLED_SETS.join(", ")
+        )
+    })?;
 
     let sha256 = format!("{:x}", Sha256::digest(raw.as_bytes()));
 
@@ -68,6 +76,41 @@ mod tests {
         // sha256 is 64 lowercase hex chars and stable across calls.
         assert_eq!(ts.sha256.len(), 64);
         assert_eq!(ts.sha256, load("overthinking-v1").unwrap().sha256);
+    }
+
+    #[test]
+    fn loads_bundled_overthinking_v2() {
+        let ts = load("overthinking-v2").unwrap();
+        assert_eq!(ts.name, "overthinking-v2");
+        assert_eq!(ts.tasks.len(), 100);
+        assert_eq!(ts.tasks[0].id, "ov2-001");
+        assert_eq!(ts.sha256.len(), 64);
+        // Frozen content → stable hash across calls.
+        assert_eq!(ts.sha256, load("overthinking-v2").unwrap().sha256);
+    }
+
+    #[test]
+    fn v2_ids_are_unique_and_answers_present() {
+        let ts = load("overthinking-v2").unwrap();
+        let mut ids: Vec<&str> = ts.tasks.iter().map(|t| t.id.as_str()).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), 100, "task ids must be unique");
+        for t in &ts.tasks {
+            assert!(!t.problem.trim().is_empty(), "{}: empty problem", t.id);
+            assert!(
+                !t.expected_answer.trim().is_empty(),
+                "{}: empty answer",
+                t.id
+            );
+        }
+    }
+
+    #[test]
+    fn every_bundled_set_loads() {
+        for name in BUNDLED_SETS {
+            assert!(load(name).is_ok(), "bundled set `{name}` failed to load");
+        }
     }
 
     #[test]
