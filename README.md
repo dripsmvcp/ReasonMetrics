@@ -79,13 +79,26 @@ npm run dev          # then open the URL vite prints (default http://localhost:5
 
 ## CLI
 
-Build and use the batch scoring tool:
+Install the batch scoring tool. Three ways, fastest first:
 
 ```bash
+# 1. Prebuilt binary — no toolchain needed. Pick your platform's asset from
+#    https://github.com/dripsmvcp/ReasonMetrics/releases, e.g. on Linux x86_64:
+curl -L https://github.com/dripsmvcp/ReasonMetrics/releases/latest/download/reasonmetrics-x86_64-unknown-linux-gnu.tar.gz | tar xz
+./reasonmetrics-x86_64-unknown-linux-gnu/reasonmetrics --help
+
+# 2. From crates.io (needs a Rust toolchain):
+cargo install reasonmetrics-cli               # installs the `reasonmetrics` binary
+
+# 3. From source:
 cargo build --release                          # first build takes a minute or two
 export PATH="$PWD/target/release:$PATH"        # or invoke as ./target/release/reasonmetrics
 reasonmetrics --help                           # sanity check
 ```
+
+> Prebuilt binaries (Linux/macOS/Windows) are published on every `cli-v*` release
+> tag. `cargo install` works once the crates are published to crates.io — both are
+> ready to go and gated only on the maintainer cutting the first release.
 
 ```bash
 reasonmetrics score  -i traces.jsonl -o scored.parquet   # score all traces

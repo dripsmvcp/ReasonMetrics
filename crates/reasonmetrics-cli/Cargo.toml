@@ -5,13 +5,19 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords = ["llm", "reasoning", "cli", "training-data", "data-curation"]
+categories = ["command-line-utilities", "text-processing", "science"]
 
 [[bin]]
 name = "reasonmetrics"
 path = "src/main.rs"
 
 [dependencies]
-reasonmetrics-core = { path = "../reasonmetrics-core" }
+# `version` is required alongside `path` so `cargo publish` can resolve the
+# dependency from crates.io. Publish order: reasonmetrics-core first, then this.
+reasonmetrics-core = { path = "../reasonmetrics-core", version = "0.2.0" }
 
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

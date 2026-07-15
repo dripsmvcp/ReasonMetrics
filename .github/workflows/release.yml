@@ -1,0 +1,57 @@
+name: Release binaries
+
+# Builds prebuilt `reasonmetrics` CLI binaries on cli-v* tags and attaches them
+# to the GitHub Release for that tag. No secrets or one-time setup needed -- the
+# built-in GITHUB_TOKEN is enough to create the release.
+#
+# All four targets build natively (no cross-compilation) to keep the workflow
+# robust. aarch64-linux and a static musl build are deliberate follow-ups.
+
+on:
+  push:
+    tags: ["cli-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, ext: "" }
+          - { os: macos-latest, target: aarch64-apple-darwin, ext: "" }
+          - { os: macos-latest, target: x86_64-apple-darwin, ext: "" }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, ext: ".exe" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked -p reasonmetrics-cli --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          name="reasonmetrics-${{ matrix.target }}"
+          mkdir -p "dist/$name"
+          cp "target/${{ matrix.target }}/release/reasonmetrics${{ matrix.ext }}" "dist/$name/"
+          cp README.md LICENSE "dist/$name/"
+          cd dist
+          if [ -n "${{ matrix.ext }}" ]; then
+            7z a "$name.zip" "$name" >/dev/null
+          else
+            tar czf "$name.tar.gz" "$name"
+          fi
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
