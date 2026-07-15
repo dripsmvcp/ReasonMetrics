@@ -21,6 +21,8 @@ fn one() -> usize {
 /// One committed run, as read back from its result JSON.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Entry {
+    #[serde(default)]
+    pub schema_version: String,
     pub model: String,
     pub task_set: TaskSetRef,
     #[serde(default)]
@@ -108,6 +110,101 @@ impl FromStr for SortKey {
 
 pub fn parse_entry(json: &str) -> anyhow::Result<Entry> {
     Ok(serde_json::from_str(json)?)
+}
+
+/// The schema version this build reads and writes.
+pub const SCHEMA_VERSION: &str = "1";
+
+/// Semantic checks on a parsed entry, beyond "it deserializes". Returns a list
+/// of human-readable problems (empty = valid). The integrity check — a claimed
+/// bundled task set must carry that set's frozen sha256 — is what keeps a
+/// leaderboard entry honest: you cannot report against a modified problem set.
+pub fn validate_entry(e: &Entry) -> Vec<String> {
+    let mut v = Vec::new();
+    if e.schema_version != SCHEMA_VERSION {
+        v.push(format!(
+            "schema_version {:?} unsupported (this build reads {:?})",
+            e.schema_version, SCHEMA_VERSION
+        ));
+    }
+    if e.model.trim().is_empty() {
+        v.push("model is empty".into());
+    }
+    if e.task_set.name.trim().is_empty() {
+        v.push("task_set.name is empty".into());
+    }
+    let sha_ok = e.task_set.sha256.len() == 64
+        && e.task_set
+            .sha256
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+    if !sha_ok {
+        v.push("task_set.sha256 is not 64 lowercase hex chars".into());
+    }
+    if !(0.0..=1.0).contains(&e.metrics.accuracy) {
+        v.push(format!("accuracy {} out of [0,1]", e.metrics.accuracy));
+    }
+    if !(0.0..=100.0).contains(&e.metrics.mean_quality) {
+        v.push(format!(
+            "mean_quality {} out of [0,100]",
+            e.metrics.mean_quality
+        ));
+    }
+    if e.sampling.samples < 1 {
+        v.push("sampling.samples must be >= 1".into());
+    }
+    if e.task_set.n > 0 && e.metrics.n_scored > e.task_set.n {
+        v.push(format!(
+            "n_scored {} exceeds task_set.n {}",
+            e.metrics.n_scored, e.task_set.n
+        ));
+    }
+    // Integrity: if the set name is one we bundle, its sha must match ours.
+    if sha_ok {
+        if let Ok(ts) = crate::bench::taskset::load(&e.task_set.name) {
+            if ts.sha256 != e.task_set.sha256 {
+                v.push(format!(
+                    "task_set.sha256 {}… does not match the frozen bundled `{}` ({}…) — \
+                     results must be run against the committed task set",
+                    &e.task_set.sha256[..8],
+                    e.task_set.name,
+                    &ts.sha256[..8],
+                ));
+            }
+        }
+    }
+    v
+}
+
+/// Validate every `*.json` under `dir`: each must parse as a result and pass the
+/// semantic checks. Returns all problems found (empty = everything valid). An
+/// empty or missing directory is not an error — there is simply nothing to check.
+pub fn validate_dir(dir: &Path) -> anyhow::Result<Vec<String>> {
+    let mut problems = Vec::new();
+    if !dir.exists() {
+        return Ok(problems);
+    }
+    let mut paths: Vec<_> = std::fs::read_dir(dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("json"))
+        .collect();
+    paths.sort();
+
+    for p in paths {
+        let raw = std::fs::read_to_string(&p)?;
+        match parse_entry(&raw) {
+            Err(e) => problems.push(format!(
+                "{}: does not parse as a result JSON ({e})",
+                p.display()
+            )),
+            Ok(entry) => {
+                for msg in validate_entry(&entry) {
+                    problems.push(format!("{}: {msg}", p.display()));
+                }
+            }
+        }
+    }
+    Ok(problems)
 }
 
 /// Read every `*.json` under `dir` as a result entry. Files that do not parse
@@ -405,6 +502,82 @@ mod tests {
         ];
         let groups = assemble(entries, None, SortKey::Accuracy);
         assert_eq!(groups[0].rows.len(), 2);
+    }
+
+    fn valid_entry() -> Entry {
+        Entry {
+            schema_version: "1".into(),
+            model: "m".into(),
+            task_set: TaskSetRef {
+                name: "custom-set".into(),
+                sha256: "a".repeat(64),
+                n: 100,
+            },
+            tool_version: "0.2.0".into(),
+            generated_at: 1,
+            sampling: SamplingRef { samples: 1 },
+            metrics: MetricsRef {
+                n_scored: 10,
+                accuracy: 0.5,
+                mean_quality: 50.0,
+                tokens_per_correct: Some(100.0),
+                cost_per_1k_correct: None,
+            },
+        }
+    }
+
+    #[test]
+    fn valid_entry_has_no_problems() {
+        assert!(validate_entry(&valid_entry()).is_empty());
+    }
+
+    #[test]
+    fn validate_flags_bad_fields() {
+        let mut e = valid_entry();
+        e.schema_version = "99".into();
+        e.model = "  ".into();
+        e.metrics.accuracy = 1.5;
+        e.task_set.sha256 = "nothex".into();
+        e.sampling.samples = 0;
+        let problems = validate_entry(&e);
+        assert!(problems.iter().any(|p| p.contains("schema_version")));
+        assert!(problems.iter().any(|p| p.contains("model is empty")));
+        assert!(problems.iter().any(|p| p.contains("accuracy")));
+        assert!(problems.iter().any(|p| p.contains("sha256")));
+        assert!(problems.iter().any(|p| p.contains("samples")));
+    }
+
+    #[test]
+    fn bundled_set_must_carry_its_frozen_sha() {
+        // Right name, wrong hash → integrity failure.
+        let mut e = valid_entry();
+        e.task_set.name = "overthinking-v2".into();
+        e.task_set.sha256 = "a".repeat(64);
+        e.task_set.n = 100;
+        let problems = validate_entry(&e);
+        assert!(
+            problems
+                .iter()
+                .any(|p| p.contains("does not match the frozen bundled")),
+            "wrong sha for a bundled set must be rejected: {problems:?}"
+        );
+
+        // Right name, right hash → accepted.
+        let ts = crate::bench::taskset::load("overthinking-v2").unwrap();
+        e.task_set.sha256 = ts.sha256;
+        assert!(
+            validate_entry(&e).is_empty(),
+            "matching frozen sha is valid"
+        );
+    }
+
+    #[test]
+    fn n_scored_cannot_exceed_task_set_size() {
+        let mut e = valid_entry();
+        e.metrics.n_scored = 101;
+        assert!(validate_entry(&e)
+            .iter()
+            .any(|p| p.contains("exceeds task_set.n")));
     }
 
     #[test]

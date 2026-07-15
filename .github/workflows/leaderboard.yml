@@ -1,0 +1,45 @@
+name: Leaderboard results
+
+# Validate every committed bench result JSON. A leaderboard entry is a PR that
+# adds a file under results/; this gate rejects malformed or dishonest ones
+# (e.g. a bundled task-set name carrying a different sha256). Runs on changes to
+# the results, the leaderboard page, or the validating code itself.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "results/**"
+      - "leaderboard/**"
+      - "crates/reasonmetrics-cli/src/bench/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "results/**"
+      - "leaderboard/**"
+      - "crates/reasonmetrics-cli/src/bench/**"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  validate:
+    name: Validate result JSONs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Validate results (strict)
+        run: cargo run --release --locked -p reasonmetrics-cli --features bench -- leaderboard --results results/ --strict
+      - name: Rebuild the leaderboard page
+        run: cargo run --release --locked -p reasonmetrics-cli --features bench -- leaderboard --results results/ --site leaderboard/
+      - name: Fail if the committed leaderboard page is stale
+        run: |
+          if ! git diff --quiet -- leaderboard/index.html; then
+            echo "::error::leaderboard/index.html is out of date. Regenerate it with:"
+            echo "  reasonmetrics leaderboard --results results/ --site leaderboard/"
+            git diff -- leaderboard/index.html
+            exit 1
+          fi

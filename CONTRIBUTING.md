@@ -54,6 +54,21 @@ The registry is the main contribution surface: one TOML file + one fixture, no R
    fixture exists, and your extraction config actually extracts it. If that passes, CI will too.
 6. Open the PR with the "New model / lexicon" issue linked. That's it.
 
+## Submit a leaderboard result
+
+A leaderboard entry is a pull request that adds one result JSON. Build the CLI
+with the `bench` feature, run a model, commit the JSON, regenerate the page:
+
+1. `reasonmetrics bench --endpoint <url>/v1 --model <name> --task-set overthinking-v2 --temperature 0`
+2. Commit the file it writes under `results/`.
+3. `reasonmetrics leaderboard --results results/ --site leaderboard/` and commit
+   the regenerated `leaderboard/index.html`.
+4. Open the PR. CI (`leaderboard.yml`) runs `leaderboard --results results/
+   --strict` and rejects malformed or dishonest results — most importantly, a
+   result that names a bundled task set but carries a different `sha256` (i.e.
+   was run against modified problems). See [results/README.md](results/README.md)
+   for the full rule list and [docs/BENCH.md](docs/BENCH.md) for the metrics.
+
 ## Rules
 
 1. **Every data contribution ships with a fixture CI can verify.** Registry entry → fixture trace;

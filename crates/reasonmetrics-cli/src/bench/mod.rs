@@ -62,17 +62,27 @@ pub struct LeaderboardArgs {
     pub out: Option<PathBuf>,
     /// If set, write a complete standalone `index.html` here instead of a table.
     pub site: Option<PathBuf>,
+    /// Validate every result JSON and exit non-zero on any problem (for CI).
+    pub strict: bool,
 }
 
 /// Combine every committed result JSON under `results/` into one leaderboard.
 pub fn run_leaderboard(args: LeaderboardArgs) -> anyhow::Result<()> {
-    let entries = leaderboard::load_dir(&args.results)?;
-    if entries.is_empty() {
-        anyhow::bail!(
-            "no bench result JSONs found in {} (run `reasonmetrics bench` first)",
-            args.results.display()
-        );
+    // Validation mode: check every result and exit, rendering nothing. An empty
+    // results dir is valid (nothing to check), so this is CI-safe from day one.
+    if args.strict {
+        let problems = leaderboard::validate_dir(&args.results)?;
+        if problems.is_empty() {
+            eprintln!("All result JSONs in {} are valid.", args.results.display());
+            return Ok(());
+        }
+        for p in &problems {
+            eprintln!("  ✗ {p}");
+        }
+        anyhow::bail!("{} result validation problem(s)", problems.len());
     }
+
+    let entries = leaderboard::load_dir(&args.results)?;
     eprintln!(
         "Loaded {} result file(s) from {}",
         entries.len(),
@@ -80,13 +90,22 @@ pub fn run_leaderboard(args: LeaderboardArgs) -> anyhow::Result<()> {
     );
     let groups = leaderboard::assemble(entries, args.task_set.as_deref(), args.sort);
 
-    // A `--site` dir gets a full standalone page; otherwise render a table.
+    // A `--site` dir always gets a page — an empty results dir yields the honest
+    // "No results yet" placeholder, which CI needs to render before any run lands.
     if let Some(dir) = &args.site {
         std::fs::create_dir_all(dir)?;
         let path = dir.join("index.html");
         std::fs::write(&path, site::render(&groups))?;
         eprintln!("Leaderboard site written to {}", path.display());
         return Ok(());
+    }
+
+    // A table over nothing is not useful; guide the user instead.
+    if groups.is_empty() {
+        anyhow::bail!(
+            "no bench result JSONs found in {} (run `reasonmetrics bench` first)",
+            args.results.display()
+        );
     }
 
     let rendered = leaderboard::render(&groups, args.format);

@@ -115,6 +115,9 @@ enum Commands {
         /// Generate a standalone static site (index.html) in this directory
         #[arg(long)]
         site: Option<std::path::PathBuf>,
+        /// Validate result JSONs and exit non-zero on any problem (for CI)
+        #[arg(long)]
+        strict: bool,
     },
 }
 
@@ -214,6 +217,7 @@ fn main() -> anyhow::Result<()> {
             format,
             out,
             site,
+            strict,
         } => {
             let sort = sort
                 .parse::<bench::leaderboard::SortKey>()
@@ -228,6 +232,7 @@ fn main() -> anyhow::Result<()> {
                 format,
                 out,
                 site,
+                strict,
             })?
         }
     }
