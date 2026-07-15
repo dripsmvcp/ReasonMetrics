@@ -25,11 +25,11 @@ impl AccuracyEfficiencyScorer {
     }
 }
 
-fn normalize_answer(s: &str) -> String {
+pub fn normalize_answer(s: &str) -> String {
     s.trim().trim_end_matches(['.', ',']).trim().to_lowercase()
 }
 
-fn answers_match(answer: &str, expected: &str) -> bool {
+pub fn answers_match(answer: &str, expected: &str) -> bool {
     let a = normalize_answer(answer);
     let b = normalize_answer(expected);
     if a == b {
@@ -156,5 +156,14 @@ mod tests {
         let t = make_trace("thinking here", "X = ±2.", Some("x = ±2"));
         let r = scorer().score(&t, &t.thinking);
         assert!(r.score > 0.0);
+    }
+
+    #[test]
+    fn answers_match_is_public_and_normalizes() {
+        // Reachable as a public item, and applies numeric + punctuation/casing rules.
+        assert!(super::answers_match("43.", "43"));
+        assert!(super::answers_match("4.0", "4"));
+        assert!(!super::answers_match("44", "43"));
+        assert_eq!(super::normalize_answer(" X = 2. "), "x = 2");
     }
 }
