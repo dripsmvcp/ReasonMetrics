@@ -95,7 +95,10 @@ pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {
         rows,
     );
 
-    let out_path = args.out.clone().unwrap_or_else(|| result.default_out_path());
+    let out_path = args
+        .out
+        .clone()
+        .unwrap_or_else(|| result.default_out_path());
     result.write_json(&out_path)?;
     eprintln!("Result written to {}", out_path.display());
 

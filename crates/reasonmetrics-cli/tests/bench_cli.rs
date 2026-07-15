@@ -1,7 +1,5 @@
 #![cfg(feature = "bench")]
 
-use std::io::Read;
-
 // Spawn a stub OpenAI-compatible endpoint that answers every task with "the
 // answer is 43", then run the real binary against it and check the artifact.
 #[test]
@@ -11,11 +9,10 @@ fn bench_end_to_end_writes_result_json() {
     let base = format!("http://{}:{}/v1", addr.ip(), addr.port());
 
     let handle = std::thread::spawn(move || {
-        // 12 tasks in overthinking-v1 → answer each request.
+        // 12 tasks in overthinking-v1 → answer each request. The request body is
+        // not needed: the stub answers 43 regardless of the task.
         for _ in 0..12 {
-            let Ok(mut req) = server.recv() else { break };
-            let mut _body = String::new();
-            let _ = req.as_reader().read_to_string(&mut _body);
+            let Ok(req) = server.recv() else { break };
             let payload = r#"{"choices":[{"message":{"content":"<think>compute</think> 43"}}],
                              "usage":{"completion_tokens":4}}"#;
             let resp = tiny_http::Response::from_string(payload).with_header(

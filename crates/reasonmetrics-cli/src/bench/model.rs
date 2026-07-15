@@ -1,5 +1,6 @@
 //! The model backend abstraction: a `Model` yields a `Completion` for a prompt.
 
+#[cfg(test)]
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -15,10 +16,13 @@ pub trait Model: Sync {
 }
 
 /// Test/offline model: returns a canned completion keyed by exact prompt.
+/// Test-only — the shipped binary talks to a real endpoint, never this.
+#[cfg(test)]
 pub struct MockModel {
     responses: HashMap<String, Completion>,
 }
 
+#[cfg(test)]
 impl MockModel {
     pub fn new(pairs: Vec<(String, Completion)>) -> Self {
         Self {
@@ -27,6 +31,7 @@ impl MockModel {
     }
 }
 
+#[cfg(test)]
 impl Model for MockModel {
     fn complete(&self, prompt: &str) -> anyhow::Result<Completion> {
         self.responses
@@ -44,7 +49,11 @@ pub fn host_of(url: &str) -> String {
         .next()
         .unwrap_or(after_scheme);
     // Drop any userinfo (user:pass@host) defensively.
-    host_port.rsplit('@').next().unwrap_or(host_port).to_string()
+    host_port
+        .rsplit('@')
+        .next()
+        .unwrap_or(host_port)
+        .to_string()
 }
 
 pub struct HttpModel {

@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(m.n_errored, 1);
         assert!((m.accuracy - 2.0 / 3.0).abs() < 1e-6);
         assert!((m.mean_quality - 60.0).abs() < 1e-6); // (80+40+60)/3
-        // total scored tokens = 600, correct = 2 → 300 tokens/correct
+                                                       // total scored tokens = 600, correct = 2 → 300 tokens/correct
         assert!((m.tokens_per_correct.unwrap() - 300.0).abs() < 1e-6);
         // cost = 600/1e6 * 0.50 = 0.0003 ; per correct = 0.00015 ; per 1k = 0.15
         assert!((m.cost_per_1k_correct.unwrap() - 0.15).abs() < 1e-6);

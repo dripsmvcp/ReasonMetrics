@@ -99,7 +99,9 @@ pub fn build_rows(attempts: &[Attempt], scoring: &ScoringConfig) -> Vec<TaskRow>
         .iter()
         .enumerate()
         .map(|(i, att)| match &att.result {
-            Ok(_) => ok_rows.remove(&i).expect("ok row built for every Ok attempt"),
+            Ok(_) => ok_rows
+                .remove(&i)
+                .expect("ok row built for every Ok attempt"),
             Err(msg) => TaskRow {
                 id: att.task.id.clone(),
                 correct: false,
