@@ -244,6 +244,24 @@ mod tests {
     }
 
     #[test]
+    fn spec_v1_default_weights_are_frozen() {
+        // These are the SPEC 1.0.0 frozen default weights (see SPEC.md §3).
+        // Changing any of them changes published scores, so it is a breaking
+        // change: update SPEC.md's version and changelog in the same PR, then
+        // update this test. It exists so the two cannot drift silently.
+        let w = ScorerWeights::default();
+        assert_eq!(w.efficiency, 0.20);
+        assert_eq!(w.language, 0.12);
+        assert_eq!(w.alignment, 0.18);
+        assert_eq!(w.structure, 0.10);
+        assert_eq!(w.repetition, 0.15);
+        assert_eq!(w.overthinking, 0.10);
+        assert_eq!(w.verification, 0.08);
+        assert_eq!(w.length, 0.07);
+        assert_eq!(w.accuracy_efficiency, 0.0);
+    }
+
+    #[test]
     fn test_invalid_weights_detected() {
         let w = ScorerWeights {
             efficiency: 0.50,

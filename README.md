@@ -209,6 +209,8 @@ Accepts aliases: `question`/`prompt`/`query`/`input` for problem; `reasoning`/`c
 
 Scores are heuristics — a lens, not ground truth. The failure modes are documented and pinned by adversarial tests: see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
+The trace schema and scoring semantics are frozen and semver'd in [SPEC.md](SPEC.md), so other tools can implement compatibly.
+
 **Does the score predict anything real?** Measured against **938 traces with objective
 correct/incorrect labels** (s1K-1.1, symbolic answer verification, no LLM in the loop): the
 composite reaches **AUC 0.714** at predicting whether a trace arrives at the right answer, and
