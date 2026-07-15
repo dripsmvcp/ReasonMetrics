@@ -184,16 +184,67 @@ story gets less flattering.
   reasoning traces, and the earlier phrasing ("most of our signal is shorter is
   better") overclaims. DeepSeek's traces are 4,658 words at the median; Gemini's
   are 1,980.
-- **`verification_score` is the only dimension that holds up everywhere** —
+- **`verification_score` is the most transferable dimension *across models*** —
   positive and significant on both models and in both difficulty strata
-  (0.596–0.680 throughout). It is the most transferable thing the scorer has.
+  (0.596–0.680 throughout). *(This does not survive a change of **domain** — see
+  the next section, where it inverts on code.)*
 - **`structural_score` does not replicate** (0.688 → 0.468, and *below* chance on
   Gemini's easy stratum). [#13](https://github.com/dripsmvcp/ReasonMetrics/issues/13)
   stays open.
 
-Reweighting the composite on this evidence is tempting and **has not been done**:
-every corpus here is math, so new weights would be fitted to one domain. Tracked
-separately rather than shipped on thin evidence.
+## Does it survive a second domain? (code, n=8000)
+
+Everything above is math. To test **domain** transfer we built objective code
+labels the same way — `scripts/build_code_labels.py` over
+[PrimeIntellect/SYNTHETIC-1](https://huggingface.co/datasets/PrimeIntellect/SYNTHETIC-1),
+the *raw* verifiable set (the SFT/distillation sets are curated to correct-only
+and so useless here; the raw set keeps the ~20% rejected). 8,000 code-reasoning
+traces (mostly "predict this code's output"), labelled by the dataset's own
+verification — no code executed on our side, exactly as the math side trusts
+`math_verify`.
+
+| dimension | math AUC | **code AUC** |
+|---|---|---|
+| quality_score (composite) | 0.714 | **0.629** |
+| **verification_score** | 0.623 | **0.470** *(below chance)* |
+| structural_score | 0.688 | 0.568 |
+| length_score | 0.680 | 0.669 |
+| *(length alone, shorter=better)* | 0.710 | **0.737** |
+
+Two findings that matter more than the headline:
+
+- **`verification_score` inverts.** The one dimension that was stable across
+  *models* on math falls to 0.470 — *below chance* — on code. Code-tracing
+  reasoning is full of "let me check each step" whether or not it reaches the
+  right answer, so the phrase-matching verification signal carries nothing here.
+  The "just weight toward verification" fix that looked good on math would
+  **hurt** on code.
+- **No dimension is stable on both axes.** Length is domain-stable (0.74 code /
+  0.71 math) but model-unstable (0.71 DeepSeek / 0.54 Gemini); verification is
+  model-stable but domain-unstable. There is no single signal that survives both
+  a model change and a domain change.
+
+On code the composite is also **beaten by length alone** (0.629 vs 0.737, paired
+bootstrap Δ = −0.108, CI excludes zero) — the opposite of "the dimensions add
+value." The default filter still does *something* (`--min-score 70` keeps traces
+that are 86.3% correct vs 78.7% for those it drops), but the composite is not the
+best-available signal in this domain.
+
+### So can the composite be reweighted? (the #31 answer)
+
+No — not as a single global weighting. Fitting weights on one domain and
+evaluating on the other (`reweight_study.py --group-field source`) is a **"no
+clean win"**: a code-fitted weighting is *significantly worse* than the hand-set
+composite on math (Δ [−0.045, −0.005]), and a math-fitted one is no better on
+code. Because the useful signal depends on **both** the model and the domain, the
+evidence points away from reweighting and toward **per-domain profiles** (a
+math preset, a code preset) — the R9 direction — not one set of weights. This is
+the decisive non-math evidence [#31](https://github.com/dripsmvcp/ReasonMetrics/issues/31)
+was waiting on, and it argues against the reweight it proposed.
+
+Weights remain **untouched.** The one caveat on this result: the code corpus is a
+single dataset and mostly output-prediction, so it is a two-point read on domain
+transfer, not the whole space.
 
 ### A confound we caught in our own work
 
@@ -292,6 +343,21 @@ python scripts/filter_study.py paired_scored.jsonl --labels paired.jsonl --paire
 
 `filter_study.py` reports the retention sweep, the random-drop null, the
 length-alone control, per-dimension AUCs with bootstrap CIs, and the paired test.
+
+The cross-domain (code) study — objective code labels, then the same tools plus
+the fit-on-one/test-on-the-other transfer test:
+
+```bash
+python scripts/build_code_labels.py -o code.jsonl        # PrimeIntellect/SYNTHETIC-1
+reasonmetrics score -i code.jsonl -o code_scored.jsonl
+python scripts/filter_study.py code_scored.jsonl --labels code.jsonl   # code AUCs
+
+# cross-domain reweight: group by dataset `source`, fit one, evaluate the other
+cat code_scored.jsonl s1k_scored.jsonl > all_scored.jsonl
+cat code.jsonl s1k_labelled.jsonl      > all_labels.jsonl
+python scripts/reweight_study.py all_scored.jsonl --labels all_labels.jsonl \
+    --group-field source
+```
 
 Refit the calibration curve (maintainer action — see the caveats above):
 

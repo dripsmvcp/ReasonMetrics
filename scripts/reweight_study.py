@@ -132,29 +132,38 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("scored")
     ap.add_argument("--labels", required=True)
+    ap.add_argument(
+        "--group-field",
+        default="model",
+        help="label field that splits the two groups to fit/evaluate across. "
+        "Default `model` (cross-model, the original #31 test); set `domain` to "
+        "fit on one domain and evaluate on the other (cross-DOMAIN transfer).",
+    )
     args = ap.parse_args()
 
+    gf = args.group_field
     labels = {r["id"]: r for r in load_jsonl(args.labels) if "correct" in r}
     rows = []
     for r in load_jsonl(args.scored):
         lab = labels.get(r["id"])
-        if lab and "model" in lab:
+        if lab and gf in lab:
             r["correct"] = bool(lab["correct"])
-            r["model"] = lab["model"]
+            r["group"] = str(lab[gf])
             rows.append(r)
     if not rows:
-        sys.exit("no rows joined — need paired labels with `model`")
+        sys.exit(f"no rows joined — need labels with `correct` and `{gf}`")
 
-    models = sorted({r["model"] for r in rows})
-    if len(models) != 2:
-        sys.exit(f"need exactly 2 models, got {models}")
-    m_a, m_b = models
-    A = [r for r in rows if r["model"] == m_a]
-    B = [r for r in rows if r["model"] == m_b]
+    groups = sorted({r["group"] for r in rows})
+    if len(groups) != 2:
+        sys.exit(f"need exactly 2 {gf} groups, got {groups}")
+    m_a, m_b = groups
+    A = [r for r in rows if r["group"] == m_a]
+    B = [r for r in rows if r["group"] == m_b]
 
     print(f"# Reweighting study: does a fix for #31 exist? (n={len(A)}+{len(B)})\n")
-    print(f"Models: **{m_a}** (n={len(A)}) and **{m_b}** (n={len(B)}), same problems.")
-    print("Every weighting is judged by AUC on **each** model. The current composite's")
+    same = " (same problems)" if gf == "model" else ""
+    print(f"Split by `{gf}`: **{m_a}** (n={len(A)}) and **{m_b}** (n={len(B)}){same}.")
+    print("Every weighting is judged by AUC on **each** group. The current composite's")
     print("problem is the *spread* between the two columns, not either number alone.\n")
 
     # --- fixed reference scorers ---
@@ -170,9 +179,10 @@ def main() -> None:
         aa, ab = held_out_pair(A, B, get)
         print(f"| {name} | {aa:.3f} | {ab:.3f} | {abs(aa - ab):.3f} |")
 
-    # --- learned weights, fit on one model, evaluated on the OTHER ---
-    # This is the honest cross-model test: a weighting that only works via
-    # DeepSeek's verbosity cannot score well on the held-out model.
+    # --- learned weights, fit on one group, evaluated on the OTHER ---
+    # The honest transfer test: a weighting that only works via one group's
+    # idiosyncrasies (DeepSeek's verbosity cross-model; math conventions
+    # cross-domain) cannot score well on the held-out group.
     learned_rows = []
     fitted = {}
     for train, test, tn in ((A, B, m_a), (B, A, m_b)):
@@ -183,17 +193,17 @@ def main() -> None:
         test_auc = auc([get(r) for r in test], [r["correct"] for r in test])
         learned_rows.append((tn, test_auc, get, test))
 
-    print("\n## Learned weighting — fit on one model, scored on the held-out one\n")
+    print(f"\n## Learned weighting — fit on one {gf}, scored on the held-out one\n")
     print("| trained on | evaluated on (held out) | AUC |")
     print("|---|---|---|")
     for tn, test_auc, _, test in learned_rows:
         other = m_b if tn == m_a else m_a
         print(f"| {tn} | {other} | **{test_auc:.3f}** |")
 
-    # Does the learned weighting beat the current composite on the held-out model?
+    # Does the learned weighting beat the current composite on the held-out group?
     rnd = random.Random(SEED)
-    print("\n## Learned vs current composite, on the held-out model\n")
-    print("| held-out model | current | learned | Δ (learned − current) 95% CI |")
+    print(f"\n## Learned vs current composite, on the held-out {gf}\n")
+    print(f"| held-out {gf} | current | learned | Δ (learned − current) 95% CI |")
     print("|---|---|---|---|")
     beats = 0
     for tn, test_auc, get, test in learned_rows:
@@ -219,23 +229,27 @@ def main() -> None:
         print(f"| {d} | {wj:+.3f} | {arrow} |")
 
     print("\n---\n")
+    axis = "model-transfer" if gf == "model" else f"{gf}-transfer"
     if beats == 2:
-        print("**A transferable fix exists.** The learned weighting beats the hand-set "
-              "composite on BOTH held-out models (CI excludes zero), which it could not "
-              "do by memorising one model. The model-transfer half of #31 is solvable "
-              "with the data in hand.")
+        print(f"**A transferable fix exists.** The learned weighting beats the hand-set "
+              f"composite on BOTH held-out {gf}s (CI excludes zero), which it could not "
+              f"do by memorising one {gf}. The {axis} half of #31 is solvable with this data.")
     elif beats == 1:
-        print("**Partial.** The learned weighting beats the current composite on one "
-              "held-out model but not decisively on both. A fix likely exists but the "
-              "evidence is not yet clean.")
+        print(f"**Partial.** The learned weighting beats the current composite on one "
+              f"held-out {gf} but not decisively on both. A fix likely exists but the "
+              f"evidence is not yet clean.")
     else:
-        print("**No clean win.** The learned weighting does not beat the hand-set "
-              "composite out-of-model. Either the current weights are already near the "
-              "achievable frontier, or the transferable signal is too thin to reweight "
-              "toward on this data.")
-    print("\n**Caveat that still stands:** every trace here is math. This settles model "
-          "transfer, not DOMAIN transfer — a weighting fitted here must still be checked "
-          "on code/clinical ground truth before it becomes a default.")
+        print(f"**No clean win.** The learned weighting does not beat the hand-set "
+              f"composite out-of-{gf}. Either the current weights are already near the "
+              f"achievable frontier, or no single weighting transfers across {gf}s here.")
+    if gf == "model":
+        print("\n**Caveat that still stands:** every trace here is math. This settles "
+              "model transfer, not DOMAIN transfer — a weighting fitted here must still be "
+              "checked on code/clinical ground truth before it becomes a default.")
+    else:
+        print(f"\n**Caveat:** the '{m_a}' and '{m_b}' corpora are each one dataset "
+              f"(s1K math; SYNTHETIC-1 code, mostly output-prediction), so this is a "
+              f"two-point read on {gf} transfer, not the whole space.")
 
 
 if __name__ == "__main__":
