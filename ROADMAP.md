@@ -15,6 +15,12 @@ from a committed command line.
 - Calibration study: per-dimension rank correlation against LLM-judge labels,
   including the dimensions that came out **badly** — [docs/CALIBRATION.md](docs/CALIBRATION.md).
   This is now the evidence bar any scorer or weight change has to clear.
+- Benchmark harness: `reasonmetrics bench` runs a fixed, content-hashed task set
+  against any OpenAI-compatible endpoint and scores each returned trace into a
+  committed result JSON (quality, accuracy, tokens- and cost-per-correct), with
+  the exact command and task-set hash embedded so a leaderboard row is a
+  reviewable PR. Feature-gated so the curation binary stays lean —
+  [docs/BENCH.md](docs/BENCH.md).
 
 ## Now
 
@@ -28,12 +34,15 @@ from a committed command line.
 
 ## Next
 
-- **`reasonmetrics bench`** — a fixed task set runnable against any
-  OpenAI-compatible endpoint.
-- **Public overthinking leaderboard** — accuracy, tokens per correct answer, and
-  cost per 1,000 correct answers for notable model releases; every entry a
-  committed JSON + the exact command that produced it, so third-party
-  submissions are reviewable PRs.
+- **Benchmark task sets** — grow beyond the initial 12-problem, hand-authored
+  `overthinking-v1` to larger, license-cleared reasoning sets; add multi-sample
+  pass@k and cross-run leaderboard assembly (combine committed result JSONs into
+  one table). These feed the public leaderboard below. Design for the harness
+  they run on: [docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md](docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md).
+- **Public overthinking leaderboard** — per model: reasoning-quality score,
+  accuracy, tokens per correct answer, and cost per 1,000 correct answers for
+  notable model releases; every entry a committed JSON + the exact command that
+  produced it, so third-party submissions are reviewable PRs.
 - **SPEC.md v1** — the trace schema and scoring semantics, frozen and semver'd,
   so other tools can implement compatibly.
 
