@@ -72,6 +72,7 @@ mod tests {
             tokens_estimated: false,
             samples: 1,
             samples_correct: usize::from(correct),
+            judge_score: None,
             error: err.map(String::from),
         }
     }

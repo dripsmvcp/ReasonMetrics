@@ -95,6 +95,18 @@ enum Commands {
         /// Draws per task; >1 reports pass@k (needs temperature > 0)
         #[arg(long, default_value_t = 1)]
         samples: usize,
+        /// Opt-in tiered judge: OpenAI-compatible endpoint for the judge model
+        #[arg(long)]
+        judge_endpoint: Option<String>,
+        /// Judge model name (required with --judge-endpoint)
+        #[arg(long)]
+        judge_model: Option<String>,
+        /// Heuristic-quality band to escalate to the judge, "lo,hi"
+        #[arg(long, default_value = "40,70")]
+        judge_band: String,
+        /// Env var holding the judge endpoint's API key
+        #[arg(long)]
+        judge_api_key_env: Option<String>,
     },
     /// Combine committed bench result JSONs into one leaderboard (feature: bench)
     #[cfg(feature = "bench")]
@@ -188,11 +200,16 @@ fn main() -> anyhow::Result<()> {
             format,
             retries,
             samples,
+            judge_endpoint,
+            judge_model,
+            judge_band,
+            judge_api_key_env,
         } => {
             let config = Config::load(&cli.config)?;
             let format = format
                 .parse::<bench::LeaderboardFormat>()
                 .map_err(|e| anyhow::anyhow!(e))?;
+            let judge_band = parse_band(&judge_band)?;
             let args = bench::BenchArgs {
                 endpoint,
                 model,
@@ -206,6 +223,10 @@ fn main() -> anyhow::Result<()> {
                 format,
                 retries,
                 samples,
+                judge_endpoint,
+                judge_model,
+                judge_band,
+                judge_api_key_env,
             };
             bench::run(args, &config.scoring)?
         }
@@ -238,6 +259,20 @@ fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+/// Parse a `"lo,hi"` judge band into an inclusive (lo, hi) pair.
+#[cfg(feature = "bench")]
+fn parse_band(s: &str) -> anyhow::Result<(f32, f32)> {
+    let (lo, hi) = s
+        .split_once(',')
+        .ok_or_else(|| anyhow::anyhow!("--judge-band must be \"lo,hi\", got `{s}`"))?;
+    let lo: f32 = lo.trim().parse()?;
+    let hi: f32 = hi.trim().parse()?;
+    if lo > hi {
+        anyhow::bail!("--judge-band lo ({lo}) must be <= hi ({hi})");
+    }
+    Ok((lo, hi))
 }
 
 fn cmd_score(input: &Path, output: Option<&Path>, config: &Config) -> anyhow::Result<()> {

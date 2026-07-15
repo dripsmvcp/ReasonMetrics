@@ -32,6 +32,10 @@ pub struct TaskRow {
     pub samples: usize,
     /// How many of those samples were correct.
     pub samples_correct: usize,
+    /// Optional LLM-judge rating (0-100), present only for tasks whose heuristic
+    /// quality fell in the judge band and were escalated (see `judge`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub judge_score: Option<f32>,
     /// Set only when *every* sample errored; the task is then excluded from scoring.
     pub error: Option<String>,
 }
@@ -111,6 +115,7 @@ pub fn build_rows(attempts: &[TaskAttempts], scoring: &ScoringConfig) -> Vec<Tas
                 tokens_estimated: false,
                 samples: total_samples,
                 samples_correct: 0,
+                judge_score: None,
                 error: Some(err),
             });
             continue;
@@ -136,6 +141,7 @@ pub fn build_rows(attempts: &[TaskAttempts], scoring: &ScoringConfig) -> Vec<Tas
             tokens_estimated: estimated,
             samples: total_samples,
             samples_correct,
+            judge_score: None,
             error: None,
         });
     }

@@ -23,6 +23,17 @@ pub struct Sampling {
     pub samples: usize,
 }
 
+/// Provenance for an optional tiered-judge pass.
+#[derive(Debug, Clone, Serialize)]
+pub struct JudgeMeta {
+    pub model: String,
+    pub endpoint_host: String,
+    pub band: [f32; 2],
+    pub n_in_band: usize,
+    pub n_scored: usize,
+    pub mean_judge_score: Option<f32>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct BenchResult {
     pub schema_version: &'static str,
@@ -35,6 +46,8 @@ pub struct BenchResult {
     pub sampling: Sampling,
     pub tokens_estimated: bool,
     pub metrics: BenchMetrics,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub judge: Option<JudgeMeta>,
     pub results: Vec<TaskRow>,
 }
 
@@ -74,6 +87,7 @@ impl BenchResult {
             },
             tokens_estimated,
             metrics,
+            judge: None,
             results,
         }
     }
@@ -200,6 +214,7 @@ mod tests {
                 tokens_estimated: false,
                 samples: 1,
                 samples_correct: 1,
+                judge_score: None,
                 error: None,
             },
             TaskRow {
@@ -210,6 +225,7 @@ mod tests {
                 tokens_estimated: false,
                 samples: 1,
                 samples_correct: 0,
+                judge_score: None,
                 error: None,
             },
         ];

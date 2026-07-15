@@ -63,6 +63,27 @@ after several tries pays for every draw in tokens/correct. Set `--temperature`
 above 0, or the `k` draws are identical and pass@k collapses to pass@1 (the tool
 warns when you don't).
 
+## Tiered judge (opt-in)
+
+The heuristic composite is most trustworthy at the extremes and least certain in
+the middle. Rather than pay an LLM to grade every trace, you can escalate **only
+the uncertain band** to a judge model:
+
+    reasonmetrics bench \
+      --endpoint http://localhost:11434/v1 --model my-model \
+      --judge-endpoint http://localhost:11434/v1 \
+      --judge-model a-stronger-model \
+      --judge-band 40,70 \
+      --judge-api-key-env JUDGE_API_KEY
+
+Every task whose heuristic `quality` falls in `--judge-band` (inclusive, default
+`40,70`) has its representative trace sent to the judge, which returns a 0–100
+rating. The rating is recorded per task as `judge_score` and summarized under a
+`judge` block in the result (model, host, band, how many were escalated and
+scored, mean). It is **advisory** — never blended into the heuristic `quality`,
+so the composite stays reproducible. `--judge-endpoint` and `--judge-model` must
+be given together; the judge key, like the model key, comes only from an env var.
+
 ## Assembling a leaderboard
 
 Each `bench` run writes one result JSON under `results/`. To combine many runs
