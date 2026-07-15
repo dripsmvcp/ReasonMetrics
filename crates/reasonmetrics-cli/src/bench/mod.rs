@@ -3,6 +3,7 @@
 
 pub mod aggregate;
 pub mod model;
+pub mod result;
 pub mod score;
 pub mod taskset;
 
