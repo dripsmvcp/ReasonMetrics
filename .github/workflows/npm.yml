@@ -1,0 +1,48 @@
+name: npm package
+
+# Publishes the wasm bindings to npm as `reasonmetrics` on npm-v* tags.
+# One-time setup: add an npm automation token as the NPM_TOKEN repo secret
+# (the name `reasonmetrics` is unclaimed; first publish needs --access public).
+#
+# It ships the `bundler` target (not the app's `web` target), which is what
+# webpack/vite/rollup consumers expect, and renames the package from the crate's
+# `reasonmetrics-wasm` to the bare `reasonmetrics` before publishing.
+
+on:
+  push:
+    tags: ["npm-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build + publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install wasm-pack
+        run: npm install -g wasm-pack@0.13.1
+
+      - name: Build the bundler-target package
+        run: wasm-pack build crates/reasonmetrics-wasm --target bundler --out-dir pkg
+
+      - name: Name it `reasonmetrics`
+        working-directory: crates/reasonmetrics-wasm/pkg
+        run: |
+          npm pkg set name=reasonmetrics
+          npm pkg set repository.type=git
+          npm pkg set repository.url=git+https://github.com/dripsmvcp/ReasonMetrics.git
+          npm pkg set homepage=https://dripsmvcp.github.io/ReasonMetrics/
+
+      - name: Publish
+        working-directory: crates/reasonmetrics-wasm/pkg
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

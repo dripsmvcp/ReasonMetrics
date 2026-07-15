@@ -153,6 +153,19 @@ rm.registry()                            # embedded model-family registry
 
 **Worked example:** [`examples/curate_a_reasoning_dataset.ipynb`](examples/curate_a_reasoning_dataset.ipynb) — the whole loop on a real dataset (HuggingFace → score → filter → inspect what you dropped → JSONL), including how to read the score without misreading it.
 
+## JavaScript / npm
+
+The same wasm engine that powers the web app, for JS/TS data pipelines (bundler target — works with Vite/webpack/rollup; runs anywhere, no server):
+
+```js
+import init, { analyze } from "reasonmetrics";
+await init();
+const out = JSON.parse(analyze(JSON.stringify({ id: "1", problem: "2+2?", thinking: "<think>4. Let me verify.</think>", answer: "4" })));
+out.scored.quality_score;   // percentile vs real traces
+```
+
+> **Not on npm yet** — published on `npm-v*` tags once the maintainer adds an `NPM_TOKEN`; the package name `reasonmetrics` is reserved for it.
+
 ## Input Format
 
 JSONL with one trace per line:
