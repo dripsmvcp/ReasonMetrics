@@ -69,9 +69,9 @@ Raw Dataset (114K traces)
     │
     ▼
 reasonmetrics filter --min-score 70              ← 2 seconds, free
-    │
-    ▼
-~95K high-quality traces
+    │                                               "better than 70% of real traces"
+    ▼                                               keeps the top ~30% (~34K)
+~34K high-quality traces
     │
     ▼
 (Optional) python3 scripts/llm_judge.py       ← Semantic scoring
@@ -81,6 +81,12 @@ reasonmetrics filter --min-score 70              ← 2 seconds, free
     ▼
 Final training set with both structural + semantic scores
 ```
+
+`quality_score` is a **percentile against a reference corpus of real reasoning
+traces**, so `--min-score 70` keeps the top ~30% — on 938 ground-truth-labelled
+traces, the kept set reaches the correct answer 69.0% of the time vs 42.4% for the
+dropped set (baseline 48.0%). Use `--top-percent N` to keep an exact share instead.
+Method, evidence, and limits: [docs/CALIBRATION.md](../docs/CALIBRATION.md).
 
 The `llm_judge.py` script supports Groq (free tier), OpenRouter (200+ models), OpenAI, and local Ollama out of the box. Auto-detects your API key from environment variables. Evaluates logical validity, factual correctness, answer correctness, and reasoning completeness.
 
