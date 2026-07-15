@@ -4,6 +4,7 @@
 pub mod aggregate;
 pub mod model;
 pub mod result;
+pub mod runner;
 pub mod score;
 pub mod taskset;
 
@@ -48,6 +49,62 @@ pub struct BenchArgs {
     pub retries: usize,
 }
 
-pub fn run(_args: BenchArgs, _scoring: &ScoringConfig) -> anyhow::Result<()> {
-    anyhow::bail!("reasonmetrics bench: not yet implemented")
+pub fn run(args: BenchArgs, scoring: &ScoringConfig) -> anyhow::Result<()> {
+    let task_set = taskset::load(&args.task_set)?;
+    eprintln!(
+        "Loaded task set `{}` ({} tasks, sha256 {}…)",
+        task_set.name,
+        task_set.tasks.len(),
+        &task_set.sha256[..task_set.sha256.len().min(8)]
+    );
+
+    let api_key = match &args.api_key_env {
+        Some(var) => Some(
+            std::env::var(var)
+                .map_err(|_| anyhow::anyhow!("env var `{var}` (from --api-key-env) is not set"))?,
+        ),
+        None => None,
+    };
+
+    let http = model::HttpModel::new(
+        &args.endpoint,
+        &args.model,
+        api_key,
+        args.temperature,
+        args.max_tokens,
+    );
+
+    let attempts = runner::run_tasks(&http, &task_set.tasks, args.concurrency, args.retries);
+    let rows = score::build_rows(&attempts, scoring);
+    let metrics = aggregate::aggregate(&rows, args.cost_per_mtok);
+    let any_estimated = rows.iter().any(|r| r.tokens_estimated);
+
+    let command = std::env::args().collect::<Vec<_>>().join(" ");
+    let result = result::BenchResult::new(
+        command,
+        (
+            task_set.name.clone(),
+            task_set.sha256.clone(),
+            task_set.tasks.len(),
+        ),
+        args.model.clone(),
+        model::host_of(&args.endpoint),
+        (args.temperature, args.max_tokens, 1),
+        any_estimated,
+        metrics,
+        rows,
+    );
+
+    let out_path = args.out.clone().unwrap_or_else(|| result.default_out_path());
+    result.write_json(&out_path)?;
+    eprintln!("Result written to {}", out_path.display());
+
+    println!("{}", result.render(args.format));
+    if result.metrics.n_errored > 0 {
+        eprintln!(
+            "Warning: {} of {} tasks errored and were excluded from accuracy.",
+            result.metrics.n_errored, result.metrics.n_attempted
+        );
+    }
+    Ok(())
 }
