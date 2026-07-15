@@ -6,16 +6,20 @@ from a committed command line.
 
 ## Shipped
 
-- Nine-dimension scoring engine (Rust, wasm-safe core shared by every surface)
-- Batch CLI: score / filter / report / stats over JSONL and Parquet
-- Client-side web analyzer: anatomy view, live Ollama streaming, share links, gallery
-- Python bindings: `score`, parallel `score_many`, `annotate`, config overrides
-- Model-family registry: fixture-gated TOML entries (`reasonmetrics models`)
-- Adversarial limitations suite: documented, CI-pinned failure modes — [docs/LIMITATIONS.md](docs/LIMITATIONS.md)
-- Calibration study: per-dimension rank correlation against LLM-judge labels,
+- [x] Nine-dimension scoring engine (Rust, wasm-safe core shared by every surface)
+- [x] Batch CLI: score / filter / report / stats over JSONL and Parquet
+- [x] Client-side web analyzer: anatomy view, live Ollama streaming, share links, gallery
+- [x] Python bindings: `score`, parallel `score_many`, `annotate`, config overrides
+- [x] Model-family registry: fixture-gated TOML entries (`reasonmetrics models`)
+- [x] Adversarial limitations suite: documented, CI-pinned failure modes — [docs/LIMITATIONS.md](docs/LIMITATIONS.md)
+- [x] Calibration study: per-dimension rank correlation against LLM-judge labels,
   including the dimensions that came out **badly** — [docs/CALIBRATION.md](docs/CALIBRATION.md).
   This is now the evidence bar any scorer or weight change has to clear.
-- Benchmark harness: `reasonmetrics bench` runs a fixed, content-hashed task set
+- [x] Percentile score scale: the raw composite is mapped to its percentile
+  against a 2,517-trace reference corpus, so a "top 20%" filter actually cuts
+  and the score means the same thing across models (fixed #30) —
+  [docs/CALIBRATION.md](docs/CALIBRATION.md).
+- [x] Benchmark harness: `reasonmetrics bench` runs a fixed, content-hashed task set
   against any OpenAI-compatible endpoint and scores each returned trace into a
   committed result JSON (quality, accuracy, tokens- and cost-per-correct), with
   the exact command and task-set hash embedded so a leaderboard row is a
@@ -24,36 +28,40 @@ from a committed command line.
 
 ## Now
 
-- **Filtering validation** — does score-filtering actually improve a fine-tune?
+- [ ] **Filtering validation** — does score-filtering actually improve a fine-tune?
   Pre-registered three-arm experiment (unfiltered / score-filtered / random-drop),
   published whichever way it comes out → `docs/VALIDATION.md`.
-- **Registry growth** — more model families and non-English restart/verification
+- [ ] **Registry growth** — more model families and non-English restart/verification
   lexicons. These are the best first contributions: one TOML + one fixture
   (see the `good first issue` label and CONTRIBUTING.md).
-- **PyPI release** of the Python package; prebuilt CLI binaries.
+- [x] **Prebuilt CLI binaries** — release workflow builds and attaches native
+  binaries on `cli-v*` tags (`.github/workflows/release.yml`, `--features bench`).
+- [ ] **PyPI release** of the Python package — wheel-build workflow is ready
+  (`.github/workflows/wheels.yml`); the publish itself is gated on account setup.
 
 ## Next
 
-- **Benchmark task sets** — grow beyond the initial 12-problem, hand-authored
+- [ ] **Benchmark task sets** — grow beyond the initial 12-problem, hand-authored
   `overthinking-v1` to larger, license-cleared reasoning sets; add multi-sample
   pass@k and cross-run leaderboard assembly (combine committed result JSONs into
   one table). These feed the public leaderboard below. Design for the harness
   they run on: [docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md](docs/superpowers/specs/2026-07-15-reasonmetrics-bench-design.md).
-- **Public overthinking leaderboard** — per model: reasoning-quality score,
+- [ ] **Public overthinking leaderboard** — per model: reasoning-quality score,
   accuracy, tokens per correct answer, and cost per 1,000 correct answers for
   notable model releases; every entry a committed JSON + the exact command that
   produced it, so third-party submissions are reviewable PRs.
-- **SPEC.md v1** — the trace schema and scoring semantics, frozen and semver'd,
+- [ ] **SPEC.md v1** — the trace schema and scoring semantics, frozen and semver'd,
   so other tools can implement compatibly.
 
 ## Later
 
-- **Thinking-budget enforcement** — a proxy that applies reasoning budgets at
+- [ ] **Thinking-budget enforcement** — a proxy that applies reasoning budgets at
   inference time (streaming incremental scoring is the groundwork).
-- **Distillation tooling** — filter teacher traces → fine-tune → before/after
+- [ ] **Distillation tooling** — filter teacher traces → fine-tune → before/after
   report card.
-- **Deeper scorers** — semantic near-duplicate detection, calibration-fitted
-  weights, per-domain profiles.
+- [ ] **Deeper scorers** — semantic near-duplicate detection, calibration-fitted
+  weights, per-domain profiles (the cross-domain study in [docs/CALIBRATION.md](docs/CALIBRATION.md)
+  is the evidence groundwork for per-domain profiles).
 
 ## Principles
 
