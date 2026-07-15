@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ReasonMetrics Quality Report</title>
+<title>reasonmetrics quality report</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -42,16 +42,16 @@
 </head>
 <body>
 
-<h1>ReasonMetrics Quality Report</h1>
+<h1>reasonmetrics quality report</h1>
 <p style="color:#6b7280">817 traces analyzed</p>
 
 <div class="summary">
   <div class="stat-card">
-    <div class="value">92.0</div>
+    <div class="value">78.5</div>
     <div class="label">Avg Quality Score</div>
   </div>
   <div class="stat-card">
-    <div class="value">816 <span style="font-size:0.9rem;color:#6b7280">(99.9%)</span></div>
+    <div class="value">603 <span style="font-size:0.9rem;color:#6b7280">(73.8%)</span></div>
     <div class="label">High Quality (≥70)</div>
   </div>
   <div class="stat-card">
@@ -59,7 +59,7 @@
     <div class="label">Language Mixed</div>
   </div>
   <div class="stat-card">
-    <div class="value">22</div>
+    <div class="value">9</div>
     <div class="label">No Self-Verification</div>
   </div>
 </div>
@@ -84,16 +84,16 @@
 
 <tr>
   <td>Answer Alignment</td>
-  <td>99.1/100</td>
-  <td><div class="bar-bg"><div class="bar-fill good" style="width:99.1%"></div></div></td>
-  <td>99.5%</td>
+  <td>89.3/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:89.3%"></div></div></td>
+  <td>92.9%</td>
 </tr>
 
 <tr>
   <td>Structural Clarity</td>
-  <td>76.1/100</td>
-  <td><div class="bar-bg"><div class="bar-fill okay" style="width:76.1%"></div></div></td>
-  <td>34.1%</td>
+  <td>89.4/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:89.4%"></div></div></td>
+  <td>77.2%</td>
 </tr>
 
 <tr>
@@ -112,9 +112,9 @@
 
 <tr>
   <td>Self-Verification</td>
-  <td>90.8/100</td>
-  <td><div class="bar-bg"><div class="bar-fill good" style="width:90.8%"></div></div></td>
-  <td>86.8%</td>
+  <td>95.6/100</td>
+  <td><div class="bar-bg"><div class="bar-fill good" style="width:95.6%"></div></div></td>
+  <td>94.1%</td>
 </tr>
 
 <tr>
@@ -131,7 +131,7 @@
 <div class="trace-card">
   <div class="header">
     <span class="id">ID: limo_636</span>
-    <span class="score" style="color:#dc2626">66.5/100</span>
+    <span class="score" style="color:#dc2626">0.0/100</span>
   </div>
   <ul class="issues">
     <li>Language mixing detected</li><li>High repetition</li><li>Overthinking (trace too long for problem)</li>
@@ -144,7 +144,7 @@ First, let&#x27;s recap what a palindrome is. A palindrome is a number that read
 <div class="trace-card">
   <div class="header">
     <span class="id">ID: limo_129</span>
-    <span class="score" style="color:#dc2626">77.0/100</span>
+    <span class="score" style="color:#dc2626">2.6/100</span>
   </div>
   <ul class="issues">
     <li>High repetition</li>
@@ -157,7 +157,7 @@ First, I need to understand what exactly is being asked here. So, for each numbe
 <div class="trace-card">
   <div class="header">
     <span class="id">ID: limo_287</span>
-    <span class="score" style="color:#dc2626">78.1/100</span>
+    <span class="score" style="color:#dc2626">6.4/100</span>
   </div>
   <ul class="issues">
     <li>Overthinking (trace too long for problem)</li>
@@ -169,11 +169,37 @@ First, let me recall that when you have four numbers, say a, b, c, d, the pairwi
 
 <div class="trace-card">
   <div class="header">
-    <span class="id">ID: limo_99</span>
-    <span class="score" style="color:#dc2626">78.1/100</span>
+    <span class="id">ID: limo_403</span>
+    <span class="score" style="color:#dc2626">8.6/100</span>
   </div>
   <ul class="issues">
-    <li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Alright, so I need to find the area of square ABCD. The square has points E, F, G, H on its sides, with EG and FH being perpendicular and each of length 34. These two segments intersect at point P, and the areas of the quadrilaterals AEPH, BFPE, CGPF, and DHPG are in the ratio 269:275:405:411. 
+
+First, let me visualize the square. ABCD is a square, so all sides are equal, and all angles are right angles. Points E, F, G, H are on AB, BC, CD, DA respectively. EG and FH are both 34 units long and a...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_692</span>
+    <span class="score" style="color:#dc2626">9.4/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
+  </ul>
+  <div class="trace-preview">Okay, let&#x27;s see... Jenny and Kenny are walking in the same direction, with Kenny faster than Jenny. They&#x27;re on parallel paths that are 200 feet apart. There&#x27;s a circular building with a 100-foot diameter right in the middle between their paths. So, the center of the building is exactly midway, which makes sense because the paths are 200 feet apart. 
+
+So, the building is 100 feet in diameter, meaning it&#x27;s 50 feet from the center to either side—right? So, if their paths are 200 feet apart, the bui...</div>
+</div>
+
+<div class="trace-card">
+  <div class="header">
+    <span class="id">ID: limo_99</span>
+    <span class="score" style="color:#dc2626">11.7/100</span>
+  </div>
+  <ul class="issues">
+    <li>Overthinking (trace too long for problem)</li>
   </ul>
   <div class="trace-preview">Okay, so I have this problem where triangle ABC is divided into six smaller triangles by lines drawn from the vertices through a common interior point. The areas of four of these triangles are given, and I need to find the area of the entire triangle ABC. Hmm, let me visualize this. There&#x27;s a common interior point, so probably three lines each from a vertex passing through this point, creating six smaller triangles. Four of their areas are known, and I have to find the total area.
 
@@ -182,60 +208,36 @@ First, I shou...</div>
 
 <div class="trace-card">
   <div class="header">
-    <span class="id">ID: limo_307</span>
-    <span class="score" style="color:#dc2626">78.5/100</span>
-  </div>
-  <ul class="issues">
-    <li>Overthinking (trace too long for problem)</li><li>No self-verification</li>
-  </ul>
-  <div class="trace-preview">Okay, let&#x27;s try to tackle this problem step by step. It involves geometry with spheres and planes, so I need to visualize the setup first. 
-
-We have two spheres with radius 36 and one sphere with radius 13. Each of these spheres is externally tangent to the other two and also tangent to two different planes, P and Q. The intersection of these two planes is the line ℓ. We need to find the distance from ℓ to the point where the radius 13 sphere is tangent to plane P. The answer should be in the fo...</div>
-</div>
-
-<div class="trace-card">
-  <div class="header">
-    <span class="id">ID: limo_326</span>
-    <span class="score" style="color:#dc2626">78.9/100</span>
+    <span class="id">ID: limo_416</span>
+    <span class="score" style="color:#dc2626">13.0/100</span>
   </div>
   <ul class="issues">
     <li>Overthinking (trace too long for problem)</li>
   </ul>
-  <div class="trace-preview">Okay, so I need to find the number of lattice points on the hyperbola defined by the equation x² - y² = 2000². A lattice point is a point where both x and y are integers. So, essentially, I need to find all integer solutions (x, y) such that when I plug them into the equation, it satisfies x² - y² = 2000².
+  <div class="trace-preview">Okay, so I need to solve this frog jump problem. Let me read it again and make sure I understand.
 
-First, let me recall that hyperbolas can have different forms, and this one is of the form x² - y² = a², which is a standard hyperbola centered at the origin, opening to the left and right al...</div>
+The frog starts at (0,0). From any point P_n = (x_n, y_n), it can jump to four possible points: (x_n + 7, y_n + 2), (x_n + 2, y_n + 7), (x_n - 5, y_n - 10), or (x_n - 10, y_n - 5). Then, we need to find the number of points (x, y) with |x| + |y| ≤ 100 that can be reached by some sequence of these jumps. The answer is M, and we need M mod 1000.
+
+Hmm. So, the frog can move in four different direction...</div>
 </div>
 
 <div class="trace-card">
   <div class="header">
-    <span class="id">ID: limo_51</span>
-    <span class="score" style="color:#dc2626">80.3/100</span>
+    <span class="id">ID: limo_731</span>
+    <span class="score" style="color:#dc2626">16.1/100</span>
   </div>
   <ul class="issues">
     <li>Overthinking (trace too long for problem)</li>
   </ul>
-  <div class="trace-preview">Alright, so I need to figure out the number of possible integer values for the area \( K \) of rhombus \( T \) in this hexagon divided into five rhombuses. The other four rhombuses \( P, Q, R, S \) are congruent and each has an area of \( \sqrt{2006} \). 
+  <div class="trace-preview">Okay, so I need to find the number of functions \( f: \{1, 2, 3, 4, 5\} \to \{1, 2, 3, 4, 5\} \) such that for every \( x \) in the domain, \( f(f(x)) = f(f(f(x))) \). Hmm, let me try to unpack this condition. 
 
-First, let me visualize the hexagon. The Asymptote code draws a hexagon with points \( A, B, C, D, EE, F \). Then there are some internal lines creating rhombuses \( P, Q, R, S, T \). The labels suggest that \( T \) is in the center, with \( P...</div>
-</div>
-
-<div class="trace-card">
-  <div class="header">
-    <span class="id">ID: limo_157</span>
-    <span class="score" style="color:#dc2626">80.4/100</span>
-  </div>
-  <ul class="issues">
-    <li>Overthinking (trace too long for problem)</li>
-  </ul>
-  <div class="trace-preview">Okay, so I have this problem here about a right triangle ABC with a right angle at C. The hypotenuse AB has a length of 60, and the medians through A and B lie along the lines y = x + 3 and y = 2x + 4 respectively. I need to find the area of triangle ABC. Hmm, let&#x27;s see. I remember that in a triangle, the median is a line from a vertex to the midpoint of the opposite side. Since it&#x27;s a right triangle, maybe there are some properties related to medians in right triangles that I can use?
-
-First, l...</div>
+First, let&#x27;s recall that a function from a set to itself can be thought of in terms of mappings where each element is sent to some element in the codomain. Without any restrictions, the number of such functions is \( 5^5 = 3125 \), since each of the 5 elements can map to any of the 5 ele...</div>
 </div>
 
 <div class="trace-card">
   <div class="header">
     <span class="id">ID: limo_739</span>
-    <span class="score" style="color:#dc2626">80.4/100</span>
+    <span class="score" style="color:#dc2626">19.4/100</span>
   </div>
   <ul class="issues">
     <li>Overthinking (trace too long for problem)</li>
@@ -247,22 +249,23 @@ Alright, the square has sides of 8 units. So each side is 8. The semicircle has 
 
 <div class="trace-card">
   <div class="header">
-    <span class="id">ID: limo_346</span>
-    <span class="score" style="color:#dc2626">80.5/100</span>
+    <span class="id">ID: limo_628</span>
+    <span class="score" style="color:#dc2626">22.2/100</span>
   </div>
   <ul class="issues">
-    <li>No self-verification</li>
+    <li>Overthinking (trace too long for problem)</li>
   </ul>
-  <div class="trace-preview">Alright, I have this problem about finding the sum of the areas of all triangles that can be formed with vertices from a 1 by 1 by 1 cube. The answer is given as \( m + \sqrt{n} + \sqrt{p} \) where \( m, n, \) and \( p \) are integers, and I need to find the sum \( m + n + p \).
+  <div class="trace-preview">Okay, so I need to figure out the largest number of different values that can appear in the list f(0), f(1), f(2), ..., f(999) given that the function f satisfies these symmetries: f(x) = f(398 - x) = f(2158 - x) = f(3214 - x) for all real x. Hmm, this seems like a problem about functional equations and periodicity. Let me try to break it down step by step.
 
-First, let me visualize the cube. It&#x27;s a unit cube, so each edge is 1 unit long. The cube has 8 vertices, and I need to consider all possible triangles formed by these vertices. 
+First, the function f is equal to several reflections or translations of itself. The equations given are:
 
-Wait, to form a triangle, I need 3 non-...</div>
+1. f(x) = f(398 - x)
+2. f(x) = f...</div>
 </div>
 
 
 <div class="footer">
-  Generated by <strong>ReasonMetrics</strong> — Reasoning trace quality auditor
+  Generated by <strong>reasonmetrics</strong> — Reasoning trace quality auditor
 </div>
 
 </body>
