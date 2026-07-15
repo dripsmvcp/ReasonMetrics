@@ -2,6 +2,7 @@
 //! endpoint and score the returned traces. Feature-gated (`bench`).
 
 pub mod model;
+pub mod score;
 pub mod taskset;
 
 use std::path::PathBuf;
