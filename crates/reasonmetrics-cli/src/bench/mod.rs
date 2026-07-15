@@ -1,6 +1,8 @@
 //! `reasonmetrics bench` — run a fixed task set against an OpenAI-compatible
 //! endpoint and score the returned traces. Feature-gated (`bench`).
 
+pub mod taskset;
+
 use std::path::PathBuf;
 use std::str::FromStr;
 

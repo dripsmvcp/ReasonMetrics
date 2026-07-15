@@ -1,0 +1,12 @@
+{"id":"ot-001","problem":"What is 17 + 26?","expected_answer":"43"}
+{"id":"ot-002","problem":"What is 8 multiplied by 7?","expected_answer":"56"}
+{"id":"ot-003","problem":"What is 144 divided by 12?","expected_answer":"12"}
+{"id":"ot-004","problem":"What is 100 minus 37?","expected_answer":"63"}
+{"id":"ot-005","problem":"What is the sum of the first 5 positive integers?","expected_answer":"15"}
+{"id":"ot-006","problem":"A train travels 60 km in 1.5 hours. What is its average speed in km/h?","expected_answer":"40"}
+{"id":"ot-007","problem":"What is 15% of 200?","expected_answer":"30"}
+{"id":"ot-008","problem":"What is the smallest prime number greater than 13?","expected_answer":"17"}
+{"id":"ot-009","problem":"What is the area of a rectangle 6 units wide and 9 units tall?","expected_answer":"54"}
+{"id":"ot-010","problem":"What is 2 to the power of 10?","expected_answer":"1024"}
+{"id":"ot-011","problem":"How many minutes are there in 3.5 hours?","expected_answer":"210"}
+{"id":"ot-012","problem":"What is 3/4 plus 1/4?","expected_answer":"1"}
