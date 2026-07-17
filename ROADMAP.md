@@ -37,6 +37,9 @@ from a committed command line.
   (default 40–70) to a judge model; advisory, never blended into the score.
 - [x] [SPEC.md](SPEC.md) v1.0.0 — trace schema and scoring semantics, frozen and
   semver'd, with a CI guard tying the default weights to the spec version.
+- [x] Compare mode in the web analyzer: load two arbitrary traces (gallery,
+  paste, upload) side by side with a per-dimension delta table — built for the
+  "same prompt, two models / keep or drop" curation call.
 
 ## Now
 
@@ -69,8 +72,9 @@ from a committed command line.
 - [ ] **Distillation tooling** — filter teacher traces → fine-tune → before/after
   report card.
 - [ ] **Deeper scorers** — semantic near-duplicate detection, calibration-fitted
-  weights, per-domain profiles (the cross-domain study in [docs/CALIBRATION.md](docs/CALIBRATION.md)
-  is the evidence groundwork for per-domain profiles).
+  weights, per-domain profiles (tracked in
+  [#33](https://github.com/dripsmvcp/ReasonMetrics/issues/33); the cross-domain
+  study in [docs/CALIBRATION.md](docs/CALIBRATION.md) is its evidence groundwork).
 
 ## Principles
 
