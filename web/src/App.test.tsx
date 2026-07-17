@@ -10,7 +10,7 @@
 // wasm scoring — that's covered in wasm.test.ts; the individual panels each
 // have their own test file.
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeShareFragment } from "./lib/share";
 import type { AnalysisResult, ScoredTrace, TraceInput } from "./lib/types";
@@ -221,5 +221,45 @@ describe("App: single analyze pipeline", () => {
     );
     await vi.waitFor(() => expect(container.querySelector(".anatomy")).not.toBeNull());
     expect(container.querySelector(".share-bar")).not.toBeNull();
+  });
+});
+
+describe("App: compare tab", () => {
+  it("lazily mounts the compare panel when the Compare tab is selected", () => {
+    const { container } = render(<App />);
+
+    const compareContainer = container.querySelector("#compare-panel-container")!;
+    expect(compareContainer.hasAttribute("hidden")).toBe(true);
+    // Not mounted until first visited — so the single-trace flow pays nothing
+    // for it and there's only one paste box on the page.
+    expect(container.querySelector(".compare-panel")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Compare" }));
+
+    expect(compareContainer.hasAttribute("hidden")).toBe(false);
+    expect(container.querySelector(".compare-panel")).not.toBeNull();
+    expect(container.querySelector("#input-panel")!.hasAttribute("hidden")).toBe(true);
+  });
+
+  it("keeps a loaded slot when switching away and back", async () => {
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Compare" }));
+
+    const slotA = container.querySelectorAll<HTMLElement>(".compare-slot")[0];
+    const textarea = within(slotA).getByPlaceholderText(/paste a trace/i);
+    fireEvent.change(textarea, {
+      target: { value: JSON.stringify({ problem: "p", thinking: "t", answer: "a" }) },
+    });
+    fireEvent.click(within(slotA).getByRole("button", { name: "Analyze" }));
+
+    await vi.waitFor(() =>
+      expect(container.querySelectorAll(".compare-slot")[0].querySelector(".anatomy")).not.toBeNull(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Paste" }));
+    fireEvent.click(screen.getByRole("button", { name: "Compare" }));
+
+    // The panel stayed mounted (just hidden), so the slot is still loaded.
+    expect(container.querySelectorAll(".compare-slot")[0].querySelector(".anatomy")).not.toBeNull();
   });
 });

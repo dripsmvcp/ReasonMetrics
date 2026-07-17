@@ -8,6 +8,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { AnatomyView } from "./components/AnatomyView";
+import { ComparePanel } from "./components/ComparePanel";
 import { GalleryStrip } from "./components/GalleryStrip";
 import { InputPanel } from "./components/InputPanel";
 import { LivePanel } from "./components/LivePanel";
@@ -16,10 +17,15 @@ import { useHashRestore } from "./hooks/useHashRestore";
 import { analyzeTrace } from "./lib/wasm";
 import type { AnalysisResult, TraceInput } from "./lib/types";
 
-type Mode = "paste" | "live";
+type Mode = "paste" | "live" | "compare";
 
 export default function App() {
   const [mode, setMode] = useState<Mode>("paste");
+  // The compare panel mounts on first visit and then stays mounted (hidden when
+  // another tab is active), so its two slots survive tab switches — but the
+  // single-trace flow pays nothing (no extra panels, no extra gallery fetch)
+  // until someone actually opens Compare.
+  const [compareVisited, setCompareVisited] = useState(false);
   const [record, setRecord] = useState<TraceInput | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   // Bumped on every successful analysis from ANY source (paste, JSONL row,
@@ -88,6 +94,16 @@ export default function App() {
         >
           Live
         </button>
+        <button
+          type="button"
+          className={mode === "compare" ? "mode-tab active" : "mode-tab"}
+          onClick={() => {
+            setMode("compare");
+            setCompareVisited(true);
+          }}
+        >
+          Compare
+        </button>
       </div>
 
       <div id="input-panel" hidden={mode !== "paste"}>
@@ -99,10 +115,13 @@ export default function App() {
       <div id="live-panel-container" hidden={mode !== "live"}>
         <LivePanel onAnalyze={onAnalyze} active={mode === "live"} />
       </div>
-      {analysisError && (
+      <div id="compare-panel-container" hidden={mode !== "compare"}>
+        {compareVisited && <ComparePanel />}
+      </div>
+      {analysisError && mode !== "compare" && (
         <p className="analysis-error" role="alert">{`analysis failed: ${analysisError}`}</p>
       )}
-      <div id="share-bar-container" hidden={!result}>
+      <div id="share-bar-container" hidden={!result || mode === "compare"}>
         {record && result && (
           <ShareBar
             trace={record}
@@ -112,7 +131,7 @@ export default function App() {
           />
         )}
       </div>
-      <div id="detail" ref={detailRef}>
+      <div id="detail" ref={detailRef} hidden={mode === "compare"}>
         {result && <AnatomyView key={generation} result={result} />}
       </div>
     </>
