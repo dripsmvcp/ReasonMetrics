@@ -105,9 +105,11 @@ export PATH="$PWD/target/release:$PATH"        # or invoke as ./target/release/r
 reasonmetrics --help                           # sanity check
 ```
 
-> Prebuilt binaries (Linux/macOS/Windows) are published on every `cli-v*` release
-> tag. `cargo install` works once the crates are published to crates.io — both are
-> ready to go and gated only on the maintainer cutting the first release.
+> Prebuilt binaries (Linux x86_64, macOS arm64 + x86_64, Windows x86_64) are
+> attached to every [`cli-v*` release](https://github.com/dripsmvcp/ReasonMetrics/releases)
+> — live since `cli-v0.2.0`, built with the `bench` feature included.
+> `cargo install reasonmetrics-cli` still needs the first crates.io publish
+> (pending); until then use the prebuilt binary or build from source.
 
 ```bash
 reasonmetrics score  -i traces.jsonl -o scored.parquet   # score all traces
